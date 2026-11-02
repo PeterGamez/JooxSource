@@ -19,7 +19,6 @@ flowchart TD
         AudioTrack["🔊 JooxAudioTrack"]
     end
 
-    RestHandler["📊 JooxRestHandler<br/><i>(/v4/joox/*)</i>"]
     JooxWeb[("☁️ JOOX Web / CDN<br/><i>(__NEXT_DATA__ SSR)</i>")]
     FallbackProviders["🌐 Audio Fallback Providers<br/><i>(YouTube / SoundCloud)</i>"]
 
@@ -36,20 +35,14 @@ flowchart TD
     FallbackProviders -.->|"Delegate Audio"| LavalinkServer
     LavalinkServer -->|"7. Deliver Audio"| Client
 
-    %% Diagnostics REST
-    Client <-->|"Status & Health"| RestHandler
-    RestHandler -.->|"Inspect / Manage"| ProxyRotator
-
     %% Custom Styling
     classDef clientNode fill:#1f2937,stroke:#374151,stroke-width:2px,color:#f9fafb;
     classDef serverNode fill:#0f172a,stroke:#3b82f6,stroke-width:2px,color:#f8fafc;
-    classDef pluginNode fill:#1e3a8a,stroke:#2563eb,stroke-width:2px,color:#eff6ff;
     classDef coreNode fill:#312e81,stroke:#6366f1,stroke-width:2px,color:#eef2ff;
     classDef cloudNode fill:#065f46,stroke:#10b981,stroke-width:2px,color:#ecfdf5;
 
     class Client clientNode;
     class LavalinkServer serverNode;
-    class RestHandler pluginNode;
     class SourceManager,ApiClient,ProxyRotator,AudioTrack coreNode;
     class JooxWeb,FallbackProviders cloudNode;
 ```

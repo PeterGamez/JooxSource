@@ -165,8 +165,8 @@ JOOX enforces regional availability restrictions for music playback. If your Lav
 
 | Strategy | Recommended Pool Size | Working Mechanism | Best Used For |
 | :--- | :---: | :--- | :--- |
-| **`roundRobin`** *(Default)* | **2 – 10+ proxies** | Sequentially cycles through healthy proxies ($1 \rightarrow 2 \rightarrow 3 \rightarrow 1$). Evenly distributes request load across all IP addresses. | General setups with homogeneous proxies of similar quality and latency; prevents rate limits by spreading traffic equally. |
-| **`failover`** | **2 – 5 proxies** | Exclusively routes traffic through the primary proxy (`proxies[0]`). Only switches to secondary proxies if the primary is quarantined or unreachable. | Setups with one dedicated, high-speed primary proxy and 1–2 backup fallback proxies for high availability (HA). |
+| **`roundRobin`** *(Default)* | **2 – 10+ proxies** | Sequentially cycles through healthy proxies. Evenly distributes request load across all IP addresses. | General setups with homogeneous proxies of similar quality and latency; prevents rate limits by spreading traffic equally. |
+| **`failover`** | **2 – 5 proxies** | Exclusively routes traffic through the primary proxy. Only switches to secondary proxies if the primary is quarantined or unreachable. | Setups with one dedicated, high-speed primary proxy and 1–2 backup fallback proxies for high availability (HA). |
 | **`random`** | **10 – 50+ proxies** | Pseudo-randomly selects an available proxy for each outgoing request without tracking rotation order. | Large proxy pools (e.g., rotating residential proxies). *Avoid using with small pools (< 5) to prevent accidental burst clustering on the same IP.* |
 
 ### 💡 Strategy Selection Guide

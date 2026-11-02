@@ -10,8 +10,6 @@ base {
 
 lavalinkPlugin {
     name = "jooxsource-plugin"
-    path = "com.github.petergamez.joox"
-    version = project.version.toString()
     apiVersion = "4.0.8"
     serverVersion = "4.0.8"
     configurePublishing = false

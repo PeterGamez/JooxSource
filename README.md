@@ -10,42 +10,63 @@ This plugin enables Discord bots and audio clients to search, resolve, and strea
 
 ```mermaid
 flowchart TD
-    Client(["🎧 Client / Discord Bot"]) -->|"1. GET /v4/loadtracks"| LavalinkServer["🖥️ Lavalink Server (v4)"]
+    Client(["🎧 Client / Discord Bot"]) -->|"GET /v4/loadtracks"| LavalinkServer["🖥️ Lavalink Server (v4)"]
+
+    subgraph Plugin ["Lavalink Plugin (:plugin)"]
+        PluginLoader["🔌 JooxPluginLoader<br/><i>(AudioPlayerManagerConfiguration)</i>"]
+    end
 
     subgraph Core ["Core Library (:main) - Standalone Lavaplayer Ready"]
-        SourceManager["🎼 JooxAudioSourceManager"]
-        ApiClient["🌐 JooxApiClient"]
-        ProxyRotator["🛡️ ProxyRotator"]
-        AudioTrack["🔊 JooxAudioTrack"]
+        SourceManager["🎼 JooxAudioSourceManager<br/>(Track & Search Resolver)"]
+        ApiClient["🌐 JooxApiClient<br/>(Next.js SSR Scraper)"]
+        ProxyRotator["🛡️ ProxyRotator<br/>(Quarantine & Failover)"]
+        AudioTrack["🔊 JooxAudioTrack<br/>(Dual-Mode Player)"]
     end
 
     JooxWeb[("☁️ JOOX Web / CDN<br/><i>(__NEXT_DATA__ SSR)</i>")]
-    FallbackProviders["🌐 Audio Fallback Providers<br/><i>(YouTube / SoundCloud)</i>"]
+    FallbackProviders["🌐 Audio Fallback Providers<br/><i>(YouTube / SoundCloud / YTM)</i>"]
+    VoiceChannel(["🔊 Discord Voice Channel"])
 
-    %% Request & Metadata Flow
-    LavalinkServer -->|"2. Dispatch Query"| SourceManager
+    %% Request & Metadata Resolution Flow
+    LavalinkServer -->|"1. Dispatch Query"| PluginLoader
+    PluginLoader -->|"2. Delegate Resolution"| SourceManager
     SourceManager -->|"3. Resolve Metadata"| ApiClient
     ApiClient <-->|"Proxy Rotation"| ProxyRotator
     ApiClient <-->|"4. Scrape Next.js SSR"| JooxWeb
-    SourceManager -->|"5. Create Track"| AudioTrack
+    SourceManager -->|"5. LoadResult (Track / Playlist)"| LavalinkServer
+    LavalinkServer -->|"Final JSON Response"| Client
 
-    %% Playback Flow (Dual-Mode)
-    AudioTrack -->|"6a. Direct CDN Stream (non-DRM)"| LavalinkServer
-    AudioTrack -.->|"6b. Fallback Mirroring (%QUERY%)"| FallbackProviders
-    FallbackProviders -.->|"Delegate Audio"| LavalinkServer
-    LavalinkServer -->|"7. Deliver Audio"| Client
+    %% Playback Execution Flow (Dual-Mode)
+    LavalinkServer -.->|"6. Start Playback"| AudioTrack
+
+    %% Direct CDN Stream Branch
+    AudioTrack -->|"✅ Direct CDN Stream (non-DRM)"| VoiceChannel
+
+    %% Fallback Mirroring Branch
+    AudioTrack -.->|"❌ Fallback Mirroring (%QUERY%)"| FallbackProviders
+    FallbackProviders -.->|"Delegate Audio Stream"| VoiceChannel
 
     %% Custom Styling
     classDef clientNode fill:#1f2937,stroke:#374151,stroke-width:2px,color:#f9fafb;
     classDef serverNode fill:#0f172a,stroke:#3b82f6,stroke-width:2px,color:#f8fafc;
+    classDef hitNode fill:#064e3b,stroke:#059669,stroke-width:2px,color:#ecfdf5;
+    classDef missNode fill:#7f1d1d,stroke:#dc2626,stroke-width:2px,color:#fef2f2;
+    classDef serviceNode fill:#1e3a8a,stroke:#2563eb,stroke-width:2px,color:#eff6ff;
+    classDef dbNode fill:#831843,stroke:#db2777,stroke-width:2px,color:#fdf2f8;
     classDef coreNode fill:#312e81,stroke:#6366f1,stroke-width:2px,color:#eef2ff;
-    classDef cloudNode fill:#065f46,stroke:#10b981,stroke-width:2px,color:#ecfdf5;
 
-    class Client clientNode;
+    class Client,VoiceChannel clientNode;
     class LavalinkServer serverNode;
+    class PluginLoader serviceNode;
+    class FallbackProviders missNode;
     class SourceManager,ApiClient,ProxyRotator,AudioTrack coreNode;
-    class JooxWeb,FallbackProviders cloudNode;
+    class JooxWeb dbNode;
 ```
+
+### Why JooxSource is Resilient and High-Performance:
+1. **Dual-Mode Playback Engine (Direct CDN + Fallback Mirroring):** `JooxAudioTrack` resolves direct CDN audio streams (supporting up to 320 kbps MP3 or lossless FLAC) whenever available. If a track is regional-restricted, VIP-locked, or DRM-protected, it seamlessly delegates playback to Lavalink's configured fallback providers (YouTube, SoundCloud, YouTube Music) using the LavaSrc search mirroring model.
+2. **Intelligent Proxy Rotation & Quarantine:** Scraper and API traffic through `JooxApiClient` is protected by `ProxyRotator`. If an IP gets rate-limited or fails, it is automatically quarantined for `cooldownSeconds` with zero downtime, smoothly cycling through remaining healthy proxies.
+3. **Decoupled Architecture:** The Core library (`:main`) operates standalone with pure Lavaplayer compatibility, completely independent of Spring Boot or Lavalink server dependencies.
 
 ---
 

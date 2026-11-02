@@ -86,7 +86,35 @@ public class JooxAudioTrack extends DelegatedAudioTrack {
                 String baseQuery = (trackInfo.title + " " + author).trim();
 
                 for (String provider : providers) {
-                    String searchQuery = provider + baseQuery;
+                    if (provider == null || provider.trim().isEmpty()) {
+                        continue;
+                    }
+                    String trimmed = provider.trim();
+                    String searchQuery = trimmed;
+
+                    boolean hasIsrc = searchQuery.contains("%ISRC%");
+                    boolean hasQuery = searchQuery.contains("%QUERY%");
+
+                    if (hasIsrc) {
+                        if (trackInfo.isrc == null || trackInfo.isrc.trim().isEmpty()) {
+                            // JOOX metadata does not contain ISRC codes. If provider only targets ISRC, skip to query provider.
+                            if (!hasQuery) {
+                                log.debug("Skipping ISRC fallback provider '{}' because track '{}' has no ISRC", provider, trackInfo.title);
+                                continue;
+                            }
+                        } else {
+                            searchQuery = searchQuery.replace("%ISRC%", trackInfo.isrc.trim());
+                        }
+                    }
+
+                    if (hasQuery) {
+                        searchQuery = searchQuery.replace("%QUERY%", baseQuery);
+                    } else if (!hasIsrc) {
+                        // Neither placeholder present: treat as prefix (e.g. "ytmsearch", "ytsearch:", "scsearch")
+                        String prefix = trimmed.endsWith(":") ? trimmed : trimmed + ":";
+                        searchQuery = prefix + baseQuery;
+                    }
+
                     log.debug("Attempting fallback audio resolution for '{}' via '{}'", trackInfo.title, searchQuery);
 
                     try {

@@ -66,7 +66,6 @@ flowchart TD
 ### Why JooxSource is Resilient and High-Performance:
 1. **Dual-Mode Playback Engine (Direct CDN + Fallback Mirroring):** `JooxAudioTrack` resolves direct CDN audio streams (supporting up to 320 kbps MP3 or lossless FLAC) whenever available. If a track is regional-restricted, VIP-locked, or DRM-protected, it seamlessly delegates playback to Lavalink's configured fallback providers (YouTube, SoundCloud, YouTube Music) using the LavaSrc search mirroring model.
 2. **Intelligent Proxy Rotation & Quarantine:** Scraper and API traffic through `JooxApiClient` is protected by `ProxyRotator`. If an IP gets rate-limited or fails, it is automatically quarantined for `cooldownSeconds` with zero downtime, smoothly cycling through remaining healthy proxies.
-3. **Decoupled Architecture:** The Core library (`:main`) operates standalone with pure Lavaplayer compatibility, completely independent of Spring Boot or Lavalink server dependencies.
 
 ---
 
@@ -164,13 +163,25 @@ plugins:
 
 JOOX enforces regional availability restrictions for music playback. If your Lavalink node is hosted outside of Southeast Asia (e.g. US, Europe), configuring regional proxies ensures reliable playback:
 
-| Strategy | Description | Recommended For |
-| :--- | :--- | :--- |
-| **`roundRobin`** | Sequentially rotates through all healthy proxies in the pool. | High-volume clusters distributing traffic across multiple proxies. |
-| **`random`** | Selects a random available proxy for each outgoing request. | Load balancing across a large pool of homogenous residential proxies. |
-| **`failover`** | Always utilizes the primary proxy (`proxies[0]`), only falling back if it fails. | Dedicated high-speed proxies with backup fallbacks. |
+| Strategy | Recommended Pool Size | Working Mechanism | Best Used For |
+| :--- | :---: | :--- | :--- |
+| **`roundRobin`** *(Default)* | **2 – 10+ proxies** | Sequentially cycles through healthy proxies ($1 \rightarrow 2 \rightarrow 3 \rightarrow 1$). Evenly distributes request load across all IP addresses. | General setups with homogeneous proxies of similar quality and latency; prevents rate limits by spreading traffic equally. |
+| **`failover`** | **2 – 5 proxies** | Exclusively routes traffic through the primary proxy (`proxies[0]`). Only switches to secondary proxies if the primary is quarantined or unreachable. | Setups with one dedicated, high-speed primary proxy and 1–2 backup fallback proxies for high availability (HA). |
+| **`random`** | **10 – 50+ proxies** | Pseudo-randomly selects an available proxy for each outgoing request without tracking rotation order. | Large proxy pools (e.g., rotating residential proxies). *Avoid using with small pools (< 5) to prevent accidental burst clustering on the same IP.* |
+
+### 💡 Strategy Selection Guide
+
+- **`roundRobin` (Recommended for most users):**
+  Ideal for small-to-medium clusters with 2 to 10 proxies of comparable speed (e.g., 3–5 datacenter proxy IPs). It guarantees a balanced 100% fair distribution, mitigating HTTP 429 Rate Limits from JOOX.
+- **`failover` (Primary + Backup architecture):**
+  Ideal when you possess 1 premium, ultra-fast regional proxy (such as a dedicated Thai/regional IP) and 1–2 cheaper backup proxies. All traffic stays on your fastest IP unless it fails.
+- **`random` (Large-scale rotating pools):**
+  Ideal for large pools (10–50+ IPs) where statistical equilibrium naturally distributes requests without requiring index state management. Not recommended for small pools (2–3 proxies) where probabilistic variance can hammer the same IP consecutively.
 
 > [!TIP]
+> **Single Proxy Setup:** If you configure only 1 proxy, all strategies behave identically. However, enabling the proxy module still provides health monitoring via `/v4/joox/proxies` and automatic quarantine recovery if the connection drops.
+
+> [!NOTE]
 > **Automatic Quarantine:** When a proxy fails consecutively up to `retryLimit`, `ProxyRotator` quarantines it for `cooldownSeconds`. Once the cooldown expires, the proxy is seamlessly returned to rotation.
 
 ---

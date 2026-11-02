@@ -12,11 +12,6 @@ This plugin enables Discord bots and audio clients to search, resolve, and strea
 flowchart TD
     Client(["🎧 Client / Discord Bot"]) -->|"1. GET /v4/loadtracks"| LavalinkServer["🖥️ Lavalink Server (v4)"]
 
-    subgraph Plugin ["Lavalink Plugin (:plugin)"]
-        PluginLoader["🔌 JooxPluginLoader"]
-        RestHandler["📊 JooxRestHandler<br/><i>(/v4/joox/*)</i>"]
-    end
-
     subgraph Core ["Core Library (:main) - Standalone Lavaplayer Ready"]
         SourceManager["🎼 JooxAudioSourceManager"]
         ApiClient["🌐 JooxApiClient"]
@@ -24,19 +19,25 @@ flowchart TD
         AudioTrack["🔊 JooxAudioTrack"]
     end
 
-    JooxAPI[("☁️ JOOX API / CDN")]
+    RestHandler["📊 JooxRestHandler<br/><i>(/v4/joox/*)</i>"]
+    JooxWeb[("☁️ JOOX Web / CDN<br/><i>(__NEXT_DATA__ SSR)</i>")]
+    FallbackProviders["🌐 Audio Fallback Providers<br/><i>(YouTube / SoundCloud)</i>"]
 
-    %% Execution Flow
+    %% Request & Metadata Flow
     LavalinkServer -->|"2. Dispatch Query"| SourceManager
-    SourceManager -->|"3. Resolve Track"| ApiClient
-    ApiClient <-->|"4. Rotate / Failover"| ProxyRotator
-    ApiClient <-->|"5. Fetch Metadata"| JooxAPI
-    SourceManager -->|"6. Create Track"| AudioTrack
-    AudioTrack -->|"7. Stream Audio"| LavalinkServer
-    LavalinkServer -->|"8. Deliver Audio"| Client
+    SourceManager -->|"3. Resolve Metadata"| ApiClient
+    ApiClient <-->|"Proxy Rotation"| ProxyRotator
+    ApiClient <-->|"4. Scrape Next.js SSR"| JooxWeb
+    SourceManager -->|"5. Create Track"| AudioTrack
+
+    %% Playback Flow (Dual-Mode)
+    AudioTrack -->|"6a. Direct CDN Stream (non-DRM)"| LavalinkServer
+    AudioTrack -.->|"6b. Fallback Mirroring (%QUERY%)"| FallbackProviders
+    FallbackProviders -.->|"Delegate Audio"| LavalinkServer
+    LavalinkServer -->|"7. Deliver Audio"| Client
 
     %% Diagnostics REST
-    Client <-->|"Diagnostics & Reset"| RestHandler
+    Client <-->|"Status & Health"| RestHandler
     RestHandler -.->|"Inspect / Manage"| ProxyRotator
 
     %% Custom Styling
@@ -48,9 +49,9 @@ flowchart TD
 
     class Client clientNode;
     class LavalinkServer serverNode;
-    class PluginLoader,RestHandler pluginNode;
+    class RestHandler pluginNode;
     class SourceManager,ApiClient,ProxyRotator,AudioTrack coreNode;
-    class JooxAPI cloudNode;
+    class JooxWeb,FallbackProviders cloudNode;
 ```
 
 ---
@@ -100,7 +101,7 @@ plugins:
     directStream: true          # Try direct JOOX CDN stream first (if available/VIP)
     fallback:
       enabled: true             # Enable automated audio fallback mirroring (default: true)
-      providers:                # Priority order for audio resolution (%QUERY% or plain prefix)
+      providers:                # Priority order for audio resolution
         - ytmsearch:%QUERY%
         - ytsearch:%QUERY%
         - scsearch:%QUERY%

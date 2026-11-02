@@ -64,7 +64,7 @@ flowchart TD
 ```
 
 ### Why JooxSource is Resilient and High-Performance:
-1. **Dual-Mode Playback Engine (Direct CDN + Fallback Mirroring):** `JooxAudioTrack` resolves direct CDN audio streams (supporting up to 320 kbps MP3 or lossless FLAC) whenever available. If a track is regional-restricted, VIP-locked, or DRM-protected, it seamlessly delegates playback to Lavalink's configured fallback providers (YouTube, SoundCloud, YouTube Music) using the LavaSrc search mirroring model.
+1. **Dual-Mode Playback Engine (Direct CDN + Fallback Mirroring):** `JooxAudioTrack` resolves direct CDN audio streams (supporting up to 320 kbps MP3 or lossless FLAC) whenever available. If a track is regional-restricted, VIP-locked, or DRM-protected, it seamlessly delegates playback to Lavalink's configured fallback providers (YouTube, SoundCloud, YouTube Music) using automated search mirroring.
 2. **Intelligent Proxy Rotation & Quarantine:** Scraper and API traffic through `JooxApiClient` is protected by `ProxyRotator`. If an IP gets rate-limited or fails, it is automatically quarantined for `cooldownSeconds` with zero downtime, smoothly cycling through remaining healthy proxies.
 
 ---
@@ -148,7 +148,7 @@ plugins:
 | `wmid` | String | `""` | Optional JOOX user Web Master ID (wmid) for authenticated requests. |
 | `sessionToken` | String | `""` | Optional JOOX VIP session token for high-bitrate / VIP tracks. |
 | `directStream` | Boolean | `false` | When `false` seamlessly delegates audio playback to fallback mirroring (YouTube Music/YouTube/SoundCloud). |
-| `fallback.enabled` | Boolean | `true` | Enables automated audio fallback mirroring (LavaSrc model) when direct stream is unavailable. |
+| `fallback.enabled` | Boolean | `true` | Enables automated audio fallback mirroring when direct stream is unavailable. |
 | `fallback.providers` | List | `[ ytmsearch:%QUERY%, ytsearch:%QUERY%, scsearch:%QUERY% ]` | Ordered list of search providers for resolving playable delegate tracks (supports `%QUERY%` or plain prefixes). |
 | `proxy.enabled` | Boolean | `false` | Enables intelligent proxy routing and automatic failover. |
 | `proxy.strategy` | String | `"LoadBalance"` | Rotation strategy: `LoadBalance`, `NanoSwitch`, or `Failover`. |

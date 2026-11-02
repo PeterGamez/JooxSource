@@ -17,13 +17,14 @@ import java.util.List;
 
 /**
  * Lavaplayer AudioTrack implementation for JOOX tracks,
- * featuring automated Audio Fallback Mirroring (LavaSrc model).
+ * featuring automated Audio Fallback Mirroring with dynamic real duration synchronization.
  */
 public class JooxAudioTrack extends DelegatedAudioTrack {
 
     private static final Logger log = LoggerFactory.getLogger(JooxAudioTrack.class);
 
     private final JooxAudioSourceManager sourceManager;
+    private volatile InternalAudioTrack activeDelegate;
 
     public JooxAudioTrack(AudioTrackInfo trackInfo, JooxAudioSourceManager sourceManager) {
         super(trackInfo);
@@ -34,7 +35,7 @@ public class JooxAudioTrack extends DelegatedAudioTrack {
     public void process(LocalAudioTrackExecutor executor) throws Exception {
         String songId = this.trackInfo.identifier;
 
-        // Automated Audio Fallback Mirroring (LavaSrc model)
+        // Automated Audio Fallback Mirroring
         if (sourceManager.getConfig().getFallback().isEnabled()) {
             AudioPlayerManager apm = sourceManager.getAudioPlayerManager();
             if (apm != null) {
@@ -84,6 +85,7 @@ public class JooxAudioTrack extends DelegatedAudioTrack {
                         if (item instanceof AudioTrack track) {
                             if (track instanceof InternalAudioTrack internalTrack) {
                                 log.info("Mirroring JOOX track '{}' via {} delegate [{}]", trackInfo.title, provider, track.getInfo().title);
+                                this.activeDelegate = internalTrack;
                                 processDelegate(internalTrack, executor);
                                 return;
                             }
@@ -93,6 +95,7 @@ public class JooxAudioTrack extends DelegatedAudioTrack {
                                     : playlist.getTracks().get(0);
                             if (track instanceof InternalAudioTrack internalTrack) {
                                 log.info("Mirroring JOOX track '{}' via {} delegate playlist track [{}]", trackInfo.title, provider, track.getInfo().title);
+                                this.activeDelegate = internalTrack;
                                 processDelegate(internalTrack, executor);
                                 return;
                             }
@@ -107,6 +110,34 @@ public class JooxAudioTrack extends DelegatedAudioTrack {
         }
 
         throw new IOException("Failed to play JOOX track '" + trackInfo.title + "' (" + songId + "): No fallback audio provider succeeded.");
+    }
+
+    @Override
+    public AudioTrackInfo getInfo() {
+        if (activeDelegate != null) {
+            AudioTrackInfo delegateInfo = activeDelegate.getInfo();
+            if (delegateInfo != null && delegateInfo.length > 0) {
+                return new AudioTrackInfo(
+                        trackInfo.title,
+                        trackInfo.author,
+                        delegateInfo.length,
+                        trackInfo.identifier,
+                        trackInfo.isStream,
+                        trackInfo.uri,
+                        trackInfo.artworkUrl,
+                        trackInfo.isrc
+                );
+            }
+        }
+        return super.getInfo();
+    }
+
+    @Override
+    public long getDuration() {
+        if (activeDelegate != null && activeDelegate.getDuration() > 0) {
+            return activeDelegate.getDuration();
+        }
+        return super.getDuration();
     }
 
     @Override

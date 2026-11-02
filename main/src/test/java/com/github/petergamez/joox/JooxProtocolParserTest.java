@@ -150,6 +150,47 @@ class JooxProtocolParserTest {
 
 
 
+    @Test
+    void testSelectsFullSongOverPreviewInSearch() throws IOException {
+        String html = "<html><head><script id=\"__NEXT_DATA__\" type=\"application/json\">" +
+                "{\"props\":{\"pageProps\":{\"searchSections\":{\"songs\":{\"item_list\":[" +
+                "{\"type\":5,\"song\":[" +
+                "  {\"song_info\":{\"id\":\"teaser_id\",\"name\":\"Test Song\",\"artist_list\":[{\"name\":\"Artist\"}],\"play_duration\":60}}," +
+                "  {\"song_info\":{\"id\":\"full_id\",\"name\":\"Test Song\",\"artist_list\":[{\"name\":\"Artist\"}],\"play_duration\":217}}" +
+                "]}" +
+                "]}}}}}</script></head><body></body></html>";
+
+        AudioPlaylist playlist = parser.parseNextDataSearch(html, DummyAudioTrack::new);
+
+        assertNotNull(playlist);
+        assertEquals(1, playlist.getTracks().size());
+        AudioTrackInfo track = playlist.getTracks().get(0).getInfo();
+        assertEquals("full_id", track.identifier);
+        assertEquals(217000L, track.length);
+    }
+
+    @Test
+    void testExtractAlbumIdAndDuration() throws IOException {
+        String singleHtml = "<html><head><script id=\"__NEXT_DATA__\" type=\"application/json\">" +
+                "{\"props\":{\"pageProps\":{" +
+                "\"singleInfo\":{\"id\":\"s123\",\"title\":\"Song Title\"}," +
+                "\"passingArgumentsData\":{\"album_id\":\"alb_xyz\",\"play_duration\":30}" +
+                "}}}</script></head><body></body></html>";
+
+        String albumId = parser.extractAlbumId(singleHtml);
+        assertEquals("alb_xyz", albumId);
+
+        String albumHtml = "<html><head><script id=\"__NEXT_DATA__\" type=\"application/json\">" +
+                "{\"props\":{\"pageProps\":{" +
+                "\"albumData\":{\"id\":\"alb_xyz\",\"trackList\":{\"items\":[" +
+                "  {\"id\":\"s123\",\"name\":\"Song Title\",\"play_duration\":242}," +
+                "  {\"id\":\"s456\",\"name\":\"Other Song\",\"play_duration\":180}" +
+                "]}}}}}</script></head><body></body></html>";
+
+        long duration = parser.parseTrackDurationFromAlbum(albumHtml, "s123");
+        assertEquals(242000L, duration);
+    }
+
     private static class DummyAudioTrack extends com.sedmelluq.discord.lavaplayer.track.DelegatedAudioTrack {
         public DummyAudioTrack(AudioTrackInfo trackInfo) {
             super(trackInfo);

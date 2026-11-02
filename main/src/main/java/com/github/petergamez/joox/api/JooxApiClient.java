@@ -180,7 +180,39 @@ public class JooxApiClient {
 
         try {
             String html = executeGet(webUri);
-            return parser.parseNextDataTrack(html, songId);
+            AudioTrackInfo trackInfo = parser.parseNextDataTrack(html, songId);
+
+            // If the track length is 60s or less (JOOX non-VIP preview duration),
+            // attempt to resolve the full track duration from its album tracklist
+            if (trackInfo != null && trackInfo.length <= 60000L) {
+                String albumId = parser.extractAlbumId(html);
+                if (albumId != null && !albumId.isEmpty()) {
+                    try {
+                        String encodedAlbumId = URLEncoder.encode(albumId, StandardCharsets.UTF_8);
+                        URI albumUri = URI.create(WEB_BASE_URL + "/" + country + "/album/" + encodedAlbumId);
+                        String albumHtml = executeGet(albumUri);
+                        long fullDuration = parser.parseTrackDurationFromAlbum(albumHtml, songId);
+                        if (fullDuration > trackInfo.length) {
+                            log.debug("Resolved full duration for track {} from album {}: {}ms (was {}ms)",
+                                    songId, albumId, fullDuration, trackInfo.length);
+                            trackInfo = new AudioTrackInfo(
+                                    trackInfo.title,
+                                    trackInfo.author,
+                                    fullDuration,
+                                    trackInfo.identifier,
+                                    trackInfo.isStream,
+                                    trackInfo.uri,
+                                    trackInfo.artworkUrl,
+                                    trackInfo.isrc
+                            );
+                        }
+                    } catch (Exception e) {
+                        log.debug("Failed to resolve full duration from album {} for track {}: {}", albumId, songId, e.getMessage());
+                    }
+                }
+            }
+
+            return trackInfo;
         } catch (Exception e) {
             log.debug("Next.js scraping failed for single track {}, falling back to legacy API: {}", songId, e.getMessage());
             Map<String, String> params = new LinkedHashMap<>();

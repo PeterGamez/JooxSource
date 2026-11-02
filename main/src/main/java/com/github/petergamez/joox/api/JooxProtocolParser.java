@@ -60,14 +60,27 @@ public class JooxProtocolParser {
             for (JsonNode item : itemList) {
                 // An item can contain an array of song variations ("song") or directly "song_info"
                 if (item.has("song") && item.get("song").isArray()) {
+                    AudioTrackInfo bestTrack = null;
                     for (JsonNode songEntry : item.get("song")) {
                         JsonNode songInfo = songEntry.path("song_info");
                         if (!songInfo.isMissingNode() && !songInfo.isNull()) {
                             AudioTrackInfo trackInfo = parseSongInfoNode(songInfo, "");
                             if (trackInfo != null) {
-                                tracks.add(trackFactory.apply(trackInfo));
+                                if (bestTrack == null) {
+                                    bestTrack = trackInfo;
+                                } else {
+                                    // Prefer full song (> 60s) over preview teaser, or the longer variation
+                                    if (bestTrack.length <= 60000L && trackInfo.length > 60000L) {
+                                        bestTrack = trackInfo;
+                                    } else if (trackInfo.length > bestTrack.length && bestTrack.length <= 60000L) {
+                                        bestTrack = trackInfo;
+                                    }
+                                }
                             }
                         }
+                    }
+                    if (bestTrack != null) {
+                        tracks.add(trackFactory.apply(bestTrack));
                     }
                 } else if (item.has("song_info")) {
                     JsonNode songInfo = item.get("song_info");
@@ -316,5 +329,61 @@ public class JooxProtocolParser {
         }
 
         return new BasicAudioPlaylist(name, tracks, null, false);
+    }
+
+    /**
+     * Extracts album ID from a single track Next.js HTML pageProps, if present.
+     */
+    public String extractAlbumId(String html) {
+        try {
+            JsonNode pageProps = extractNextData(html);
+            if (pageProps.hasNonNull("passingArgumentsData") && pageProps.path("passingArgumentsData").hasNonNull("album_id")) {
+                String albumId = pageProps.path("passingArgumentsData").path("album_id").asText();
+                if (!albumId.isEmpty()) return albumId;
+            }
+            if (pageProps.hasNonNull("playerSongData") && pageProps.path("playerSongData").hasNonNull("albumid")) {
+                String albumId = pageProps.path("playerSongData").path("albumid").asText();
+                if (!albumId.isEmpty()) return albumId;
+            }
+            if (pageProps.hasNonNull("singleInfo")) {
+                JsonNode singleInfo = pageProps.path("singleInfo");
+                if (singleInfo.hasNonNull("albumId")) {
+                    String albumId = singleInfo.path("albumId").asText();
+                    if (!albumId.isEmpty()) return albumId;
+                }
+                if (singleInfo.hasNonNull("album_id")) {
+                    String albumId = singleInfo.path("album_id").asText();
+                    if (!albumId.isEmpty()) return albumId;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    /**
+     * Finds the duration of a track (in milliseconds) inside an album Next.js HTML page.
+     */
+    public long parseTrackDurationFromAlbum(String html, String songId) {
+        try {
+            JsonNode pageProps = extractNextData(html);
+            JsonNode items = pageProps.path("albumData").path("trackList").path("items");
+            if (!items.isArray() || items.isEmpty()) {
+                items = pageProps.path("albumTrackData").path("trackList");
+            }
+            if (items.isArray()) {
+                for (JsonNode item : items) {
+                    String id = item.hasNonNull("id") ? item.get("id").asText()
+                            : (item.hasNonNull("songid") ? item.get("songid").asText() : "");
+                    if (songId.equals(id)) {
+                        if (item.hasNonNull("play_duration")) {
+                            return item.get("play_duration").asLong() * 1000L;
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return 0L;
     }
 }

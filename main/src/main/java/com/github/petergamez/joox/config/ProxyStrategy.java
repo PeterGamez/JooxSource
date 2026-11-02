@@ -4,12 +4,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
- * Proxy load balancing and failover strategies in camelCase.
+ * Proxy load balancing and routing strategies matching Lavalink conventions.
  */
 public enum ProxyStrategy {
-    roundRobin,
-    random,
-    failover;
+    LoadBalance,
+    NanoSwitch,
+    Failover;
 
     @JsonValue
     public String toValue() {
@@ -19,14 +19,13 @@ public enum ProxyStrategy {
     @JsonCreator
     public static ProxyStrategy fromString(String value) {
         if (value == null) {
-            return roundRobin;
+            return LoadBalance;
         }
         for (ProxyStrategy strategy : values()) {
-            if (strategy.name().equalsIgnoreCase(value)
-                    || strategy.name().equalsIgnoreCase(value.replace("-", "").replace("_", ""))) {
+            if (strategy.name().equalsIgnoreCase(value)) {
                 return strategy;
             }
         }
-        return roundRobin;
+        return LoadBalance;
     }
 }

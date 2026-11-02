@@ -92,8 +92,8 @@ Add the following block to your Lavalink `application.yml`:
 ```yaml
 lavalink:
   plugins:
-    - dependency: com.github.petergamez.jooxsource:jooxsource-plugin:0.1.0
-      repository: https://jitpack.io # Or drop jooxsource-plugin-0.1.0.jar into plugins/
+    - dependency: com.github.petergamez.jooxsource:jooxsource-plugin:x.y.z
+      repository: https://jitpack.io # Or place the .jar file directly into the plugins/ directory
 
 plugins:
   joox:
@@ -122,7 +122,7 @@ plugins:
     # Proxy Rotation Configuration (recommended for multi-region or geo-unblocking)
     proxy:
       enabled: false            # Enable proxy rotation (default: false)
-      strategy: "roundRobin"    # Rotation strategy: roundRobin, random, failover
+      strategy: "LoadBalance"   # Rotation strategy: LoadBalance, NanoSwitch, Failover
       retryLimit: 3             # Max proxy retry attempts before failing request
       cooldownSeconds: 60       # Quarantine cooldown for failing proxies in seconds
       connectTimeoutSeconds: 5  # Connection timeout per proxy in seconds
@@ -151,7 +151,7 @@ plugins:
 | `fallback.enabled` | Boolean | `true` | Enables automated audio fallback mirroring (LavaSrc model) when direct stream is unavailable. |
 | `fallback.providers` | List | `[ ytmsearch:%QUERY%, ytsearch:%QUERY%, scsearch:%QUERY% ]` | Ordered list of search providers for resolving playable delegate tracks (supports `%QUERY%` or plain prefixes). |
 | `proxy.enabled` | Boolean | `false` | Enables intelligent proxy routing and automatic failover. |
-| `proxy.strategy` | String | `"roundRobin"` | Rotation strategy: `roundRobin`, `random`, or `failover`. |
+| `proxy.strategy` | String | `"LoadBalance"` | Rotation strategy: `LoadBalance`, `NanoSwitch`, or `Failover`. |
 | `proxy.retryLimit` | Integer | `3` | Maximum retry attempts across available proxies before aborting request. |
 | `proxy.cooldownSeconds` | Integer | `60` | Duration (in seconds) to quarantine a failed proxy before testing it again. |
 | `proxy.connectTimeoutSeconds` | Integer | `5` | Connection timeout per proxy attempt in seconds. |
@@ -161,25 +161,22 @@ plugins:
 
 ## 🛡️ Proxy Strategies & Regional Routing
 
-JOOX enforces regional availability restrictions for music playback. If your Lavalink node is hosted outside of Southeast Asia (e.g. US, Europe), configuring regional proxies ensures reliable playback:
+JOOX enforces regional availability restrictions for music playback. If your Lavalink node is hosted outside of Southeast Asia (e.g. US, Europe), configuring regional proxies ensures reliable playback using Lavalink-aligned routing strategies:
 
 | Strategy | Recommended Pool Size | Working Mechanism | Best Used For |
 | :--- | :---: | :--- | :--- |
-| **`roundRobin`** *(Default)* | **2 – 10+ proxies** | Sequentially cycles through healthy proxies. Evenly distributes request load across all IP addresses. | General setups with homogeneous proxies of similar quality and latency; prevents rate limits by spreading traffic equally. |
-| **`failover`** | **2 – 5 proxies** | Exclusively routes traffic through the primary proxy. Only switches to secondary proxies if the primary is quarantined or unreachable. | Setups with one dedicated, high-speed primary proxy and 1–2 backup fallback proxies for high availability (HA). |
-| **`random`** | **10 – 50+ proxies** | Pseudo-randomly selects an available proxy for each outgoing request without tracking rotation order. | Large proxy pools (e.g., rotating residential proxies). *Avoid using with small pools (< 5) to prevent accidental burst clustering on the same IP.* |
+| **`LoadBalance`** *(Default)* | **2 – 10+ proxies** | Sequentially cycles through healthy proxies in a round-robin loop ($1 \rightarrow 2 \rightarrow 3 \rightarrow 1$). Evenly distributes request load across all IP addresses. | General setups with homogeneous proxies of similar quality and latency; prevents rate limits by spreading traffic equally. |
+| **`NanoSwitch`** | **5 – 20+ proxies** | Rapidly alternates proxies on every system clock update without locks or state tracking. | Medium-to-large proxy pools where incoming requests naturally scatter across IPs; zero-lock and highly efficient under concurrent load. |
+| **`Failover`** | **2 – 5 proxies** | Exclusively routes traffic through the primary proxy. Only switches to secondary backup proxies if the primary is quarantined or unreachable. | Setups with one dedicated, high-speed primary proxy and 1–2 backup fallback proxies for high availability (HA). |
 
 ### 💡 Strategy Selection Guide
 
-- **`roundRobin` (Recommended for most users):**
+- **`LoadBalance` (Recommended for most users):**
   Ideal for small-to-medium clusters with 2 to 10 proxies of comparable speed (e.g., 3–5 datacenter proxy IPs). It guarantees a balanced 100% fair distribution, mitigating HTTP 429 Rate Limits from JOOX.
-- **`failover` (Primary + Backup architecture):**
+- **`NanoSwitch` (Clock-based switching):**
+  Ideal for pools with 5 to 20+ proxies. Operates statelessly by switching IP offsets on every incoming request. Concurrent requests from different voice channels naturally disperse across available proxies without counter contention.
+- **`Failover` (Primary + Backup architecture):**
   Ideal when you possess 1 premium, ultra-fast regional proxy (such as a dedicated Thai/regional IP) and 1–2 cheaper backup proxies. All traffic stays on your fastest IP unless it fails.
-- **`random` (Large-scale rotating pools):**
-  Ideal for large pools (10–50+ IPs) where statistical equilibrium naturally distributes requests without requiring index state management. Not recommended for small pools (2–3 proxies) where probabilistic variance can hammer the same IP consecutively.
-
-> [!TIP]
-> **Single Proxy Setup:** If you configure only 1 proxy, all strategies behave identically. However, enabling the proxy module still provides health monitoring via `/v4/joox/proxies` and automatic quarantine recovery if the connection drops.
 
 > [!NOTE]
 > **Automatic Quarantine:** When a proxy fails consecutively up to `retryLimit`, `ProxyRotator` quarantines it for `cooldownSeconds`. Once the cooldown expires, the proxy is seamlessly returned to rotation.
@@ -231,6 +228,9 @@ GET /v4/joox/status
   "countryCode": "TH",
   "qualities": [ "MP3_320", "MP3_128", "M4A_96", "FLAC" ],
   "allowSearch": true,
+  "directStream": true,
+  "fallbackEnabled": true,
+  "fallbackProviders": [ "ytmsearch:%QUERY%", "ytsearch:%QUERY%", "scsearch:%QUERY%" ],
   "proxyEnabled": true,
   "totalProxies": 3,
   "availableProxies": 3
@@ -244,7 +244,7 @@ GET /v4/joox/proxies
 **Example Response:**
 ```json
 {
-  "strategy": "roundRobin",
+  "strategy": "LoadBalance",
   "proxies": [
     {
       "host": "proxy1.example.com",

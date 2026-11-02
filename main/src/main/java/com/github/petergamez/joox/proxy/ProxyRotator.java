@@ -8,12 +8,11 @@ import org.slf4j.LoggerFactory;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Thread-safe proxy manager supporting Round-Robin, Random, and Failover rotation
- * with automatic quarantine cooldown for unstable proxies.
+ * Thread-safe proxy manager supporting LoadBalance (Round-Robin), NanoSwitch (Nanosecond-based),
+ * and Failover rotation with automatic quarantine cooldown for unstable proxies.
  */
 public class ProxyRotator {
 
@@ -55,20 +54,22 @@ public class ProxyRotator {
             return null;
         }
 
-        ProxyStrategy strategy = config.getStrategy() != null ? config.getStrategy() : ProxyStrategy.roundRobin;
+        ProxyStrategy strategy = config.getStrategy() != null ? config.getStrategy() : ProxyStrategy.LoadBalance;
         int size = entries.size();
 
         for (int attempts = 0; attempts < size; attempts++) {
             ProxyEntry candidate;
             switch (strategy) {
-                case random:
-                    candidate = entries.get(ThreadLocalRandom.current().nextInt(size));
+                case NanoSwitch:
+                    long nano = System.nanoTime();
+                    int nanoIndex = (int) Long.remainderUnsigned(nano + attempts, size);
+                    candidate = entries.get(nanoIndex);
                     break;
-                case failover:
-                    // In failover mode, always try the first healthy proxy in the priority list
+                case Failover:
+                    // In Failover mode, always try the first healthy proxy in the priority list
                     candidate = entries.get(attempts);
                     break;
-                case roundRobin:
+                case LoadBalance:
                 default:
                     int index = Math.abs(roundRobinIndex.getAndIncrement() % size);
                     candidate = entries.get(index);
@@ -98,7 +99,7 @@ public class ProxyRotator {
             entry.markFailure(config.getCooldownSeconds());
             log.warn("Proxy {} reported failure ({}/{}): {}",
                     entry, entry.getConsecutiveFailures(), config.getRetryLimit(),
-                    cause != null ? cause.getMessage() : "Unknown");
+                    cause != null ? cause.getMessage() : "Unknown error");
         }
     }
 
@@ -106,18 +107,18 @@ public class ProxyRotator {
         for (ProxyEntry entry : entries) {
             entry.resetQuarantine();
         }
-    }
-
-    public List<ProxyEntry> getEntries() {
-        return Collections.unmodifiableList(entries);
+        log.info("Reset quarantines for all {} proxies", entries.size());
     }
 
     public int getTotalCount() {
         return entries.size();
     }
 
-    public long getAvailableCount() {
-        return entries.stream().filter(ProxyEntry::isAvailable).count();
+    public int getAvailableCount() {
+        return (int) entries.stream().filter(ProxyEntry::isAvailable).count();
+    }
+
+    public List<ProxyEntry> getEntries() {
+        return Collections.unmodifiableList(entries);
     }
 }
-

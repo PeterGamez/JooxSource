@@ -23,10 +23,10 @@ class ProxyRotatorTest {
     }
 
     @Test
-    void testRoundRobinRotation() {
+    void testLoadBalanceRotation() {
         ProxyConfig config = new ProxyConfig();
         config.setEnabled(true);
-        config.setStrategy(ProxyStrategy.roundRobin);
+        config.setStrategy(ProxyStrategy.LoadBalance);
         config.setProxies(List.of(
                 "http://10.0.0.1:8080",
                 "http://10.0.0.2:8080",
@@ -45,14 +45,33 @@ class ProxyRotatorTest {
         assertNotNull(p2);
         assertNotNull(p3);
         assertNotNull(p4);
-        assertEquals(p1.getHost(), p4.getHost()); // Cycles back in round-robin
+        assertEquals(p1.getHost(), p4.getHost()); // Cycles back in round-robin / LoadBalance
+    }
+
+    @Test
+    void testNanoSwitchStrategy() {
+        ProxyConfig config = new ProxyConfig();
+        config.setEnabled(true);
+        config.setStrategy(ProxyStrategy.NanoSwitch);
+        config.setProxies(List.of(
+                "http://10.0.0.1:8080",
+                "http://10.0.0.2:8080",
+                "http://10.0.0.3:8080"
+        ));
+
+        ProxyRotator rotator = new ProxyRotator(config);
+        assertEquals(3, rotator.getTotalCount());
+
+        ProxyEntry p = rotator.nextProxy();
+        assertNotNull(p);
+        assertTrue(List.of("10.0.0.1", "10.0.0.2", "10.0.0.3").contains(p.getHost()));
     }
 
     @Test
     void testFailoverStrategyAndQuarantine() {
         ProxyConfig config = new ProxyConfig();
         config.setEnabled(true);
-        config.setStrategy(ProxyStrategy.failover);
+        config.setStrategy(ProxyStrategy.Failover);
         config.setCooldownSeconds(10);
         config.setProxies(List.of(
                 "http://primary:8080",
@@ -80,4 +99,3 @@ class ProxyRotatorTest {
         assertTrue(primary.isAvailable());
     }
 }
-

@@ -29,6 +29,7 @@ class JooxConfigTest {
         assertEquals("ytmsearch:%QUERY%", config.getFallback().getProviders().get(0));
         assertNotNull(config.getProxy());
         assertFalse(config.getProxy().isEnabled());
+        assertEquals(ProxyStrategy.LoadBalance, config.getProxy().getStrategy());
     }
 
     @Test
@@ -62,11 +63,23 @@ class JooxConfigTest {
     void testProxyConfiguration() {
         JooxConfig config = new JooxConfig();
         config.getProxy().setEnabled(true);
-        config.getProxy().setStrategy(ProxyStrategy.failover);
+        config.getProxy().setStrategy(ProxyStrategy.Failover);
         config.getProxy().setProxies(List.of("http://127.0.0.1:8080", "socks5://127.0.0.1:1080"));
 
         assertTrue(config.getProxy().isEnabled());
-        assertEquals(ProxyStrategy.failover, config.getProxy().getStrategy());
+        assertEquals(ProxyStrategy.Failover, config.getProxy().getStrategy());
         assertEquals(2, config.getProxy().getProxies().size());
+    }
+
+    @Test
+    void testProxyStrategyParsing() {
+        assertEquals(ProxyStrategy.LoadBalance, ProxyStrategy.fromString("LoadBalance"));
+        assertEquals(ProxyStrategy.LoadBalance, ProxyStrategy.fromString("loadbalance"));
+        assertEquals(ProxyStrategy.NanoSwitch, ProxyStrategy.fromString("NanoSwitch"));
+        assertEquals(ProxyStrategy.NanoSwitch, ProxyStrategy.fromString("nanoswitch"));
+        assertEquals(ProxyStrategy.Failover, ProxyStrategy.fromString("Failover"));
+        assertEquals(ProxyStrategy.Failover, ProxyStrategy.fromString("failover"));
+        assertEquals(ProxyStrategy.LoadBalance, ProxyStrategy.fromString(null));
+        assertEquals(ProxyStrategy.LoadBalance, ProxyStrategy.fromString("unknown"));
     }
 }

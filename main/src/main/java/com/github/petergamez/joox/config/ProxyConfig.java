@@ -9,7 +9,7 @@ import java.util.List;
 public class ProxyConfig {
 
     private boolean enabled = false;
-    private ProxyStrategy strategy = ProxyStrategy.roundRobin;
+    private ProxyStrategy strategy = ProxyStrategy.LoadBalance;
     private List<String> proxies = new ArrayList<>();
     private int retryLimit = 3;
     private int cooldownSeconds = 60;
@@ -63,4 +63,3 @@ public class ProxyConfig {
         this.connectTimeoutSeconds = connectTimeoutSeconds;
     }
 }
-

@@ -181,12 +181,12 @@ plugins:
 
 Both `wmid` and `sessionToken` are **optional** for general playback. However, they are required if you want to stream **VIP-exclusive tracks** or unlock **Lossless FLAC** audio quality:
 
-1. **Open JOOX Web:** Navigate to [joox.com](https://www.joox.com/) in your web browser (Chrome, Edge, or Firefox).
-2. **Log In:** Sign in with your JOOX account (Facebook, Google, WeChat, QR code, or Phone).
+1. **Open JOOX Web:** Navigate to [joox.com](https://www.joox.com/) in your web browser.
+2. **Log In:** Sign in with your JOOX account.
 3. **Open Developer Tools:** Press `F12` (or right-click anywhere on the page and select **Inspect**).
 4. **Locate Session Cookies via Application or Network Tab:**
    - **Method A (Via Application / Storage Tab):**
-     - Navigate to the **Application** tab (in Firefox: **Storage** tab).
+     - Navigate to the **Application** tab.
      - In the left sidebar, expand **Cookies** and select `https://www.joox.com`.
      - Find the following cookie entries:
        - `wmid`: Numeric User ID (e.g., `123456789`) -> copy this into the `wmid` configuration field.

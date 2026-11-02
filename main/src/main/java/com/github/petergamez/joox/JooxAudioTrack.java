@@ -81,9 +81,13 @@ public class JooxAudioTrack extends DelegatedAudioTrack {
             AudioPlayerManager apm = sourceManager.getAudioPlayerManager();
             if (apm != null) {
                 List<String> providers = sourceManager.getConfig().getFallback().getProviders();
+                String title = trackInfo.title != null ? trackInfo.title : "";
                 String author = (trackInfo.author != null && !trackInfo.author.equalsIgnoreCase("Unknown Artist"))
                         ? trackInfo.author : "";
-                String baseQuery = (trackInfo.title + " " + author).trim();
+                String baseQuery = (title + " " + author).trim();
+                if (baseQuery.isEmpty()) {
+                    baseQuery = songId;
+                }
 
                 for (String provider : providers) {
                     if (provider == null || provider.trim().isEmpty()) {
@@ -120,14 +124,20 @@ public class JooxAudioTrack extends DelegatedAudioTrack {
                     try {
                         AudioItem item = apm.loadItemSync(searchQuery);
                         if (item instanceof AudioTrack track) {
-                            log.info("Mirroring JOOX track '{}' via {} delegate [{}]", trackInfo.title, provider, track.getInfo().title);
-                            processDelegate((InternalAudioTrack) track, executor);
-                            return;
+                            if (track instanceof InternalAudioTrack internalTrack) {
+                                log.info("Mirroring JOOX track '{}' via {} delegate [{}]", trackInfo.title, provider, track.getInfo().title);
+                                processDelegate(internalTrack, executor);
+                                return;
+                            }
                         } else if (item instanceof AudioPlaylist playlist && !playlist.getTracks().isEmpty()) {
-                            AudioTrack track = playlist.getTracks().get(0);
-                            log.info("Mirroring JOOX track '{}' via {} delegate playlist track [{}]", trackInfo.title, provider, track.getInfo().title);
-                            processDelegate((InternalAudioTrack) track, executor);
-                            return;
+                            AudioTrack track = playlist.getSelectedTrack() != null
+                                    ? playlist.getSelectedTrack()
+                                    : playlist.getTracks().get(0);
+                            if (track instanceof InternalAudioTrack internalTrack) {
+                                log.info("Mirroring JOOX track '{}' via {} delegate playlist track [{}]", trackInfo.title, provider, track.getInfo().title);
+                                processDelegate(internalTrack, executor);
+                                return;
+                            }
                         }
                     } catch (Exception ex) {
                         log.warn("Fallback provider '{}' failed for query '{}': {}", provider, searchQuery, ex.getMessage());

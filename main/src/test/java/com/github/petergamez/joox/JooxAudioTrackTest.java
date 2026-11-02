@@ -114,6 +114,37 @@ class JooxAudioTrackTest {
     }
 
     @Test
+    void testSelectedTrackFromPlaylistFallback() throws Exception {
+        JooxConfig config = new JooxConfig();
+        config.setDirectStream(false);
+        config.getFallback().setEnabled(true);
+        config.getFallback().setProviders(java.util.List.of("ytmsearch:%QUERY%"));
+
+        JooxAudioSourceManager sourceManager = new JooxAudioSourceManager(config);
+        AudioTrackInfo info = new AudioTrackInfo("ความรัก", "Bodyslam", 291000L, "qrc123", false, "https://www.joox.com/single/qrc123", null, null);
+        JooxAudioTrack track = new JooxAudioTrack(info, sourceManager);
+
+        AtomicBoolean delegateProcessed = new AtomicBoolean(false);
+        DummyAudioTrack mockDelegate1 = new DummyAudioTrack(info, () -> {});
+        DummyAudioTrack mockSelected = new DummyAudioTrack(info, () -> delegateProcessed.set(true));
+
+        com.sedmelluq.discord.lavaplayer.track.BasicAudioPlaylist playlist =
+                new com.sedmelluq.discord.lavaplayer.track.BasicAudioPlaylist("Search", java.util.List.of(mockDelegate1, mockSelected), mockSelected, true);
+
+        AudioPlayerManager apm = new DefaultAudioPlayerManager() {
+            @Override
+            public AudioItem loadItemSync(String identifier) {
+                return playlist;
+            }
+        };
+
+        sourceManager.setAudioPlayerManager(apm);
+        track.process(null);
+
+        assertTrue(delegateProcessed.get(), "Should process selected track from playlist when available");
+    }
+
+    @Test
     void testThrowsExceptionWhenDirectAndFallbackBothFail() {
         JooxConfig config = new JooxConfig();
         config.setDirectStream(false);

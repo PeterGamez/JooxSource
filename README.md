@@ -135,7 +135,7 @@ plugins:
 | `sessionToken` | String | `""` | Optional JOOX VIP session token for high-bitrate / VIP tracks. |
 | `directStream` | Boolean | `true` | Attempts direct playback from JOOX CDN before falling back. |
 | `fallback.enabled` | Boolean | `true` | Enables automated audio fallback mirroring (LavaSrc model) when direct stream is unavailable. |
-| `fallback.providers` | List | `[ ytmsearch, ytsearch, scsearch ]` | Ordered list of search providers for resolving playable delegate tracks. |
+| `fallback.providers` | List | `[ ytmsearch:%QUERY%, ytsearch:%QUERY%, scsearch:%QUERY% ]` | Ordered list of search providers for resolving playable delegate tracks (supports `%QUERY%` or plain prefixes). |
 | `proxy.enabled` | Boolean | `false` | Enables intelligent proxy routing and automatic failover. |
 | `proxy.strategy` | String | `"roundRobin"` | Rotation strategy: `roundRobin`, `random`, or `failover`. |
 | `proxy.retryLimit` | Integer | `3` | Maximum retry attempts across available proxies before aborting request. |

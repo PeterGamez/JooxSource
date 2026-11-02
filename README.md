@@ -12,50 +12,47 @@ Following the decoupled pattern established by TrackCache, the repository is spl
 
 ```mermaid
 flowchart TD
-    Client(["🎧 Lavalink Client / Discord Bot"]) -->|"POST /v4/loadtracks"| Lavalink["🖥️ Lavalink v4 Server"]
-    Client <-->|"GET /v4/joox/*<br/>POST /v4/joox/proxies/reset"| RestApi
+    Client(["🎧 Client / Discord Bot"]) -->|"1. GET /v4/loadtracks"| LavalinkServer["🖥️ Lavalink Server (v4)"]
 
-    subgraph PluginModule [":plugin (Lavalink Extension Module)"]
-        PluginLoader["🔌 JooxPluginLoader<br/><i>(AudioPlayerManagerConfiguration SPI)</i>"]
-        PluginConfig["⚙️ JooxPluginConfig<br/><i>(@ConfigurationProperties: plugins.joox)</i>"]
-        RestApi["📊 JooxRestHandler<br/><i>(Diagnostics: /v4/joox/*)</i>"]
+    subgraph Plugin ["Lavalink Plugin (:plugin)"]
+        PluginLoader["🔌 JooxPluginLoader"]
+        RestHandler["📊 JooxRestHandler<br/><i>(/v4/joox/*)</i>"]
     end
 
-    subgraph CoreModule [":main (Core Library - Standalone Lavaplayer Ready)"]
-        SourceManager["🎼 JooxAudioSourceManager<br/><i>(AudioSourceManager)</i>"]
-        AudioTrack["🔊 JooxAudioTrack<br/><i>(DelegatedAudioTrack)</i>"]
-        ApiClient["🌐 JooxApiClient<br/><i>(Java 17 HttpClient & Failover)</i>"]
-        ProtocolParser["🧩 JooxProtocolParser<br/><i>(JSON Deserializer)</i>"]
-        ProxyRotator["🛡️ ProxyRotator<br/><i>(Round-Robin / Failover)</i>"]
-        CoreConfig["📝 JooxConfig<br/><i>(Pure Java POJO)</i>"]
+    subgraph Core ["Core Library (:main) - Standalone Lavaplayer Ready"]
+        SourceManager["🎼 JooxAudioSourceManager"]
+        ApiClient["🌐 JooxApiClient"]
+        ProxyRotator["🛡️ ProxyRotator"]
+        AudioTrack["🔊 JooxAudioTrack"]
     end
 
-    Lavalink -->|"1. Initialize Plugin"| PluginLoader
-    PluginLoader -->|"2. Read application.yml"| PluginConfig
-    PluginConfig -.->|"Inherits & Populates"| CoreConfig
-    PluginLoader -->|"3. Register Source Manager"| SourceManager
-    SourceManager -.->|"Reads Settings"| CoreConfig
+    JooxAPI[("☁️ JOOX API / CDN")]
 
-    RestApi -->|"Query Status & Reset Proxies"| ProxyRotator
-    RestApi -.->|"Read Active Config"| PluginConfig
+    %% Execution Flow
+    LavalinkServer -->|"2. Dispatch Query"| SourceManager
+    SourceManager -->|"3. Resolve Track"| ApiClient
+    ApiClient <-->|"4. Rotate / Failover"| ProxyRotator
+    ApiClient <-->|"5. Fetch Metadata"| JooxAPI
+    SourceManager -->|"6. Create Track"| AudioTrack
+    AudioTrack -->|"7. Stream Audio"| LavalinkServer
+    LavalinkServer -->|"8. Deliver Audio"| Client
 
-    Lavalink -->|"4. Dispatch Query"| SourceManager
-    SourceManager -->|"5. Search / Fetch Metadata"| ApiClient
-    ApiClient <-->|"6. Rotate / Quota Check"| ProxyRotator
-    ApiClient -->|"7. Ingest Raw JSON"| ProtocolParser
-    ProtocolParser -->|"8. Build Track / Playlist"| AudioTrack
-    AudioTrack -->|"9. Probe & Stream Audio CDN"| Lavalink
-    Lavalink -->|"10. Deliver Audio"| Client
+    %% Diagnostics REST
+    Client <-->|"Diagnostics & Reset"| RestHandler
+    RestHandler -.->|"Inspect / Manage"| ProxyRotator
 
+    %% Custom Styling
     classDef clientNode fill:#1f2937,stroke:#374151,stroke-width:2px,color:#f9fafb;
     classDef serverNode fill:#0f172a,stroke:#3b82f6,stroke-width:2px,color:#f8fafc;
     classDef pluginNode fill:#1e3a8a,stroke:#2563eb,stroke-width:2px,color:#eff6ff;
     classDef coreNode fill:#312e81,stroke:#6366f1,stroke-width:2px,color:#eef2ff;
+    classDef cloudNode fill:#065f46,stroke:#10b981,stroke-width:2px,color:#ecfdf5;
 
     class Client clientNode;
-    class Lavalink serverNode;
-    class PluginLoader,PluginConfig,RestApi pluginNode;
-    class SourceManager,AudioTrack,ApiClient,ProtocolParser,ProxyRotator,CoreConfig coreNode;
+    class LavalinkServer serverNode;
+    class PluginLoader,RestHandler pluginNode;
+    class SourceManager,ApiClient,ProxyRotator,AudioTrack coreNode;
+    class JooxAPI cloudNode;
 ```
 
 ### Module Responsibilities:

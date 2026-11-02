@@ -27,7 +27,7 @@ public class JooxConfig {
 
     public static class FallbackConfig {
         private boolean enabled = true;
-        private List<String> providers = new ArrayList<>(List.of("ytmsearch:", "ytsearch:", "scsearch:"));
+        private List<String> providers = new ArrayList<>(List.of("ytmsearch:%QUERY%", "ytsearch:%QUERY%", "scsearch:%QUERY%"));
 
         public boolean isEnabled() {
             return enabled;

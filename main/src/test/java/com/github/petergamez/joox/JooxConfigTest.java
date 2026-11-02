@@ -26,7 +26,7 @@ class JooxConfigTest {
         assertNotNull(config.getFallback());
         assertTrue(config.getFallback().isEnabled());
         assertEquals(3, config.getFallback().getProviders().size());
-        assertEquals("ytmsearch:", config.getFallback().getProviders().get(0));
+        assertEquals("ytmsearch:%QUERY%", config.getFallback().getProviders().get(0));
         assertNotNull(config.getProxy());
         assertFalse(config.getProxy().isEnabled());
     }

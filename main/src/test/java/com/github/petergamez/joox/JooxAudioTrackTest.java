@@ -52,6 +52,68 @@ class JooxAudioTrackTest {
     }
 
     @Test
+    void testQueryTemplateSupport() throws Exception {
+        JooxConfig config = new JooxConfig();
+        config.setDirectStream(false);
+        config.getFallback().setEnabled(true);
+        config.getFallback().setProviders(java.util.List.of("ytmsearch:%QUERY%"));
+
+        JooxAudioSourceManager sourceManager = new JooxAudioSourceManager(config);
+        AudioTrackInfo info = new AudioTrackInfo("ความรัก", "Bodyslam", 291000L, "qrc123", false, "https://www.joox.com/single/qrc123", null, null);
+        JooxAudioTrack track = new JooxAudioTrack(info, sourceManager);
+
+        AtomicBoolean delegateProcessed = new AtomicBoolean(false);
+        DummyAudioTrack mockDelegate = new DummyAudioTrack(info, () -> delegateProcessed.set(true));
+
+        AudioPlayerManager apm = new DefaultAudioPlayerManager() {
+            @Override
+            public AudioItem loadItemSync(String identifier) {
+                if (identifier.equals("ytmsearch:ความรัก Bodyslam")) {
+                    return mockDelegate;
+                }
+                return null;
+            }
+        };
+
+        sourceManager.setAudioPlayerManager(apm);
+        track.process(null);
+
+        assertTrue(delegateProcessed.get(), "Fallback with %QUERY% template should resolve properly");
+    }
+
+    @Test
+    void testIsrcSkippedGracefullyWhenNullAndFallsBackToQuery() throws Exception {
+        JooxConfig config = new JooxConfig();
+        config.setDirectStream(false);
+        config.getFallback().setEnabled(true);
+        // User configures ISRC first (PulseLink style), followed by QUERY fallback
+        config.getFallback().setProviders(java.util.List.of("ytsearch:\"%ISRC%\"", "ytmsearch:%QUERY%"));
+
+        JooxAudioSourceManager sourceManager = new JooxAudioSourceManager(config);
+        // Track with null ISRC (standard for JOOX metadata)
+        AudioTrackInfo info = new AudioTrackInfo("ความรัก", "Bodyslam", 291000L, "qrc123", false, "https://www.joox.com/single/qrc123", null, null);
+        JooxAudioTrack track = new JooxAudioTrack(info, sourceManager);
+
+        AtomicBoolean delegateProcessed = new AtomicBoolean(false);
+        DummyAudioTrack mockDelegate = new DummyAudioTrack(info, () -> delegateProcessed.set(true));
+
+        AudioPlayerManager apm = new DefaultAudioPlayerManager() {
+            @Override
+            public AudioItem loadItemSync(String identifier) {
+                if (identifier.equals("ytmsearch:ความรัก Bodyslam")) {
+                    return mockDelegate;
+                }
+                return null;
+            }
+        };
+
+        sourceManager.setAudioPlayerManager(apm);
+        track.process(null);
+
+        assertTrue(delegateProcessed.get(), "ISRC provider should be skipped without failing, falling back to %QUERY%");
+    }
+
+    @Test
     void testThrowsExceptionWhenDirectAndFallbackBothFail() {
         JooxConfig config = new JooxConfig();
         config.setDirectStream(false);

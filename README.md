@@ -78,8 +78,8 @@ Add the following block to your Lavalink `application.yml`:
 ```yaml
 lavalink:
   plugins:
-    - dependency: "com.github.petergamez.jooxsource:jooxsource-plugin:0.1.0"
-      repository: "https://jitpack.io" # Or drop jooxsource-plugin-0.1.0.jar into plugins/
+    - dependency: com.github.petergamez.jooxsource:jooxsource-plugin:0.1.0
+      repository: https://jitpack.io # Or drop jooxsource-plugin-0.1.0.jar into plugins/
 
 plugins:
   joox:
@@ -100,10 +100,10 @@ plugins:
     directStream: true          # Try direct JOOX CDN stream first (if available/VIP)
     fallback:
       enabled: true             # Enable automated audio fallback mirroring (default: true)
-      providers:                # Priority order for audio resolution
-        - "ytmsearch:"
-        - "ytsearch:"
-        - "scsearch:"
+      providers:                # Priority order for audio resolution (%QUERY% or plain prefix)
+        - ytmsearch:%QUERY%
+        - ytsearch:%QUERY%
+        - scsearch:%QUERY%
 
     # Proxy Rotation Configuration (recommended for multi-region or geo-unblocking)
     proxy:
@@ -113,9 +113,9 @@ plugins:
       cooldownSeconds: 60       # Quarantine cooldown for failing proxies in seconds
       connectTimeoutSeconds: 5  # Connection timeout per proxy in seconds
       proxies:
-        - "http://proxy1.example.com:8080"
-        - "http://username:password@proxy2.example.com:8080"
-        - "socks5://proxy3.example.com:1080"
+        - http://proxy1.example.com:8080
+        - http://username:password@proxy2.example.com:8080
+        - socks5://proxy3.example.com:1080
 ```
 
 ---
@@ -135,7 +135,7 @@ plugins:
 | `sessionToken` | String | `""` | Optional JOOX VIP session token for high-bitrate / VIP tracks. |
 | `directStream` | Boolean | `true` | Attempts direct playback from JOOX CDN before falling back. |
 | `fallback.enabled` | Boolean | `true` | Enables automated audio fallback mirroring (LavaSrc model) when direct stream is unavailable. |
-| `fallback.providers` | List | `["ytmsearch:", "ytsearch:", "scsearch:"]` | Ordered list of search prefixes for resolving playable delegate tracks. |
+| `fallback.providers` | List | `[ ytmsearch, ytsearch, scsearch ]` | Ordered list of search providers for resolving playable delegate tracks. |
 | `proxy.enabled` | Boolean | `false` | Enables intelligent proxy routing and automatic failover. |
 | `proxy.strategy` | String | `"roundRobin"` | Rotation strategy: `roundRobin`, `random`, or `failover`. |
 | `proxy.retryLimit` | Integer | `3` | Maximum retry attempts across available proxies before aborting request. |

@@ -27,8 +27,8 @@ import java.util.Map;
 import java.util.function.Function;
 
 /**
- * Built-in Java 17 HttpClient for communicating with JOOX API endpoints,
- * featuring dynamic proxy rotation, failover resilience, and zero external network dependencies.
+ * Built-in Java 17 HttpClient for communicating with JOOX web pages and API endpoints,
+ * featuring Next.js __NEXT_DATA__ SSR page scraping, dynamic proxy rotation, and legacy failover resilience.
  */
 public class JooxApiClient {
 
@@ -36,6 +36,7 @@ public class JooxApiClient {
 
     private static final String DEFAULT_USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
+    private static final String WEB_BASE_URL = "https://www.joox.com";
     private static final String BASE_API_URL = "https://api.joox.com/web-fcgi-bin";
     private static final String OPENJOOX_API_URL = "https://api-jooxtt.sanook.com/openjoox/v1";
 
@@ -73,7 +74,8 @@ public class JooxApiClient {
                     .timeout(Duration.ofSeconds(12))
                     .header("User-Agent", DEFAULT_USER_AGENT)
                     .header("Referer", "https://www.joox.com/")
-                    .header("Accept", "application/json, text/plain, */*");
+                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,application/json,*/*;q=0.8")
+                    .header("Accept-Language", "en-US,en;q=0.9,th;q=0.8");
 
             // Apply cookie authentication if configured
             StringBuilder cookieHeader = new StringBuilder();
@@ -94,12 +96,12 @@ public class JooxApiClient {
                 );
 
                 if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                    throw new IOException("JOOX API returned HTTP status " + response.statusCode());
+                    throw new IOException("JOOX returned HTTP status " + response.statusCode());
                 }
 
                 String content = response.body();
                 if (content == null || content.isEmpty()) {
-                    throw new IOException("JOOX API returned empty response body");
+                    throw new IOException("JOOX returned empty response body");
                 }
 
                 if (proxyEntry != null) {
@@ -119,7 +121,7 @@ public class JooxApiClient {
             }
         }
 
-        throw new IOException("Failed to execute JOOX API request after " + maxAttempts + " attempts", lastException);
+        throw new IOException("Failed to execute JOOX request after " + maxAttempts + " attempts", lastException);
     }
 
     private HttpClient buildClientForProxy(ProxyEntry proxyEntry) {
@@ -170,61 +172,101 @@ public class JooxApiClient {
     }
 
     /**
-     * Resolves metadata for a single JOOX track ID.
+     * Resolves metadata for a single JOOX track ID via Next.js SSR scraping with legacy API fallback.
      */
     public AudioTrackInfo fetchTrackInfo(String songId) throws IOException {
-        Map<String, String> params = new LinkedHashMap<>();
-        params.put("songid", songId);
-        params.put("country", config.getCountryCode().toLowerCase());
-        params.put("lang", "en");
+        String country = config.getCountryCode().toLowerCase();
+        String encodedId = URLEncoder.encode(songId, StandardCharsets.UTF_8);
+        URI webUri = URI.create(WEB_BASE_URL + "/" + country + "/single/" + encodedId);
 
-        URI uri = buildUri(BASE_API_URL + "/web_get_songinfo", params);
-        String json = executeGet(uri);
-        return parser.parseTrack(json, songId);
+        try {
+            String html = executeGet(webUri);
+            return parser.parseNextDataTrack(html, songId);
+        } catch (Exception e) {
+            log.debug("Next.js scraping failed for single track {}, falling back to legacy API: {}", songId, e.getMessage());
+            Map<String, String> params = new LinkedHashMap<>();
+            params.put("songid", songId);
+            params.put("country", country);
+            params.put("lang", "en");
+
+            URI apiUri = buildUri(BASE_API_URL + "/web_get_songinfo", params);
+            String json = executeGet(apiUri);
+            return parser.parseTrack(json, songId);
+        }
     }
 
     /**
-     * Searches JOOX for tracks matching the query.
+     * Searches JOOX for tracks matching the query via Next.js SSR scraping with legacy API fallback.
      */
     public AudioPlaylist searchTracks(String query, Function<AudioTrackInfo, AudioTrack> trackFactory) throws IOException {
-        Map<String, String> params = new LinkedHashMap<>();
-        params.put("search_input", query);
-        params.put("sin", "0");
-        params.put("ein", String.valueOf(config.getSearchLimit()));
-        params.put("country", config.getCountryCode().toLowerCase());
-        params.put("lang", "en");
+        String country = config.getCountryCode().toLowerCase();
+        String encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8).replace("+", "%20");
+        URI webUri = URI.create(WEB_BASE_URL + "/" + country + "/search/" + encodedQuery);
 
-        URI uri = buildUri(BASE_API_URL + "/web_search", params);
-        String json = executeGet(uri);
-        return parser.parseSearch(json, trackFactory);
+        try {
+            String html = executeGet(webUri);
+            return parser.parseNextDataSearch(html, trackFactory);
+        } catch (Exception e) {
+            log.debug("Next.js scraping failed for query '{}', falling back to legacy API: {}", query, e.getMessage());
+            Map<String, String> params = new LinkedHashMap<>();
+            params.put("search_input", query);
+            params.put("sin", "0");
+            params.put("ein", String.valueOf(config.getSearchLimit()));
+            params.put("country", country);
+            params.put("lang", "en");
+
+            URI apiUri = buildUri(BASE_API_URL + "/web_search", params);
+            String json = executeGet(apiUri);
+            return parser.parseSearch(json, trackFactory);
+        }
     }
 
     /**
-     * Fetches tracks from a JOOX album.
+     * Fetches tracks from a JOOX album via Next.js SSR scraping with legacy API fallback.
      */
     public AudioPlaylist fetchAlbum(String albumId, Function<AudioTrackInfo, AudioTrack> trackFactory) throws IOException {
-        Map<String, String> params = new LinkedHashMap<>();
-        params.put("albumid", albumId);
-        params.put("country", config.getCountryCode().toLowerCase());
-        params.put("lang", "en");
+        String country = config.getCountryCode().toLowerCase();
+        String encodedAlbumId = URLEncoder.encode(albumId, StandardCharsets.UTF_8);
+        URI webUri = URI.create(WEB_BASE_URL + "/" + country + "/album/" + encodedAlbumId);
 
-        URI uri = buildUri(BASE_API_URL + "/web_get_albuminfo", params);
-        String json = executeGet(uri);
-        return parser.parsePlaylist(json, "JOOX Album " + albumId, trackFactory);
+        try {
+            String html = executeGet(webUri);
+            return parser.parseNextDataAlbum(html, albumId, trackFactory);
+        } catch (Exception e) {
+            log.debug("Next.js scraping failed for album {}, falling back to legacy API: {}", albumId, e.getMessage());
+            Map<String, String> params = new LinkedHashMap<>();
+            params.put("albumid", albumId);
+            params.put("country", country);
+            params.put("lang", "en");
+
+            URI apiUri = buildUri(BASE_API_URL + "/web_get_albuminfo", params);
+            String json = executeGet(apiUri);
+            return parser.parsePlaylist(json, "JOOX Album " + albumId, trackFactory);
+        }
     }
 
     /**
-     * Fetches tracks from a JOOX playlist.
+     * Fetches tracks from a JOOX playlist via Next.js SSR scraping with legacy API fallback.
      */
     public AudioPlaylist fetchPlaylist(String playlistId, Function<AudioTrackInfo, AudioTrack> trackFactory) throws IOException {
-        Map<String, String> params = new LinkedHashMap<>();
-        params.put("playlistid", playlistId);
-        params.put("country", config.getCountryCode().toLowerCase());
-        params.put("lang", "en");
+        String country = config.getCountryCode().toLowerCase();
+        String encodedPlaylistId = URLEncoder.encode(playlistId, StandardCharsets.UTF_8);
+        URI webUri = URI.create(WEB_BASE_URL + "/" + country + "/playlist/" + encodedPlaylistId);
 
-        URI uri = buildUri(BASE_API_URL + "/web_get_playlistinfo", params);
-        String json = executeGet(uri);
-        return parser.parsePlaylist(json, "JOOX Playlist " + playlistId, trackFactory);
+        try {
+            String html = executeGet(webUri);
+            return parser.parseNextDataPlaylist(html, playlistId, trackFactory);
+        } catch (Exception e) {
+            log.debug("Next.js scraping failed for playlist {}, falling back to legacy API: {}", playlistId, e.getMessage());
+            Map<String, String> params = new LinkedHashMap<>();
+            params.put("playlistid", playlistId);
+            params.put("country", country);
+            params.put("lang", "en");
+
+            URI apiUri = buildUri(BASE_API_URL + "/web_get_playlistinfo", params);
+            String json = executeGet(apiUri);
+            return parser.parsePlaylist(json, "JOOX Playlist " + playlistId, trackFactory);
+        }
     }
 
     /**

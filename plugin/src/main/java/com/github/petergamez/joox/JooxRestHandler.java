@@ -46,6 +46,9 @@ public class JooxRestHandler {
         response.put("countryCode", config.getCountryCode());
         response.put("qualities", config.getQualities().stream().map(Enum::name).collect(Collectors.toList()));
         response.put("allowSearch", config.isAllowSearch());
+        response.put("directStream", config.isDirectStream());
+        response.put("fallbackEnabled", config.getFallback().isEnabled());
+        response.put("fallbackProviders", config.getFallback().getProviders());
         response.put("proxyEnabled", config.getProxy().isEnabled());
         response.put("totalProxies", rotator.getTotalCount());
         response.put("availableProxies", rotator.getAvailableCount());
@@ -99,25 +102,27 @@ public class JooxRestHandler {
         return ResponseEntity.ok(response);
     }
 
-    private boolean isAuthorized(String jooxPassword) {
-        String requiredPassword = pluginLoader.getConfig().getRestApi().getPassword();
-        if (requiredPassword == null || requiredPassword.trim().isEmpty()) {
+    private boolean isAuthorized(String candidatePassword) {
+        String configuredPassword = pluginLoader.getConfig().getRestApi().getPassword();
+        if (configuredPassword == null || configuredPassword.isEmpty()) {
             return true;
         }
-        if (jooxPassword == null) {
+        if (candidatePassword == null) {
             return false;
         }
         return MessageDigest.isEqual(
-                requiredPassword.trim().getBytes(StandardCharsets.UTF_8),
-                jooxPassword.trim().getBytes(StandardCharsets.UTF_8)
+                candidatePassword.getBytes(StandardCharsets.UTF_8),
+                configuredPassword.getBytes(StandardCharsets.UTF_8)
         );
     }
 
     private ResponseEntity<Map<String, Object>> unauthorizedResponse() {
         Map<String, Object> error = new LinkedHashMap<>();
+        error.put("timestamp", System.currentTimeMillis());
+        error.put("status", HttpStatus.UNAUTHORIZED.value());
         error.put("error", "Unauthorized");
         error.put("message", "Invalid or missing X-Joox-Password header");
+        error.put("path", "/v4/joox/*");
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 }
-

@@ -21,7 +21,32 @@ public class JooxConfig {
     private String sessionToken = "";
     private boolean allowSearch = true;
     private int searchLimit = 20;
+    private boolean directStream = true;
+    private FallbackConfig fallback = new FallbackConfig();
     private ProxyConfig proxy = new ProxyConfig();
+
+    public static class FallbackConfig {
+        private boolean enabled = true;
+        private List<String> providers = new ArrayList<>(List.of("ytmsearch:", "ytsearch:", "scsearch:"));
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public List<String> getProviders() {
+            return providers;
+        }
+
+        public void setProviders(List<String> providers) {
+            if (providers != null && !providers.isEmpty()) {
+                this.providers = new ArrayList<>(providers);
+            }
+        }
+    }
 
     public boolean isEnabled() {
         return enabled;
@@ -95,6 +120,22 @@ public class JooxConfig {
 
     public void setSearchLimit(int searchLimit) {
         this.searchLimit = searchLimit;
+    }
+
+    public boolean isDirectStream() {
+        return directStream;
+    }
+
+    public void setDirectStream(boolean directStream) {
+        this.directStream = directStream;
+    }
+
+    public FallbackConfig getFallback() {
+        return fallback;
+    }
+
+    public void setFallback(FallbackConfig fallback) {
+        this.fallback = fallback != null ? fallback : new FallbackConfig();
     }
 
     public ProxyConfig getProxy() {

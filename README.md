@@ -96,6 +96,15 @@ plugins:
     wmid: ""                    # Optional: Joox Web Master ID
     sessionToken: ""            # Optional: Joox VIP session token for premium/FLAC tracks
 
+    # Playback & Audio Mirroring (LavaSrc model)
+    directStream: true          # Try direct JOOX CDN stream first (if available/VIP)
+    fallback:
+      enabled: true             # Enable automated audio fallback mirroring (default: true)
+      providers:                # Priority order for audio resolution
+        - "ytmsearch:"
+        - "ytsearch:"
+        - "scsearch:"
+
     # Proxy Rotation Configuration (recommended for multi-region or geo-unblocking)
     proxy:
       enabled: false            # Enable proxy rotation (default: false)
@@ -124,6 +133,9 @@ plugins:
 | `searchLimit` | Integer | `20` | Maximum number of results returned for search queries. |
 | `wmid` | String | `""` | Optional JOOX user Web Master ID (wmid) for authenticated requests. |
 | `sessionToken` | String | `""` | Optional JOOX VIP session token for high-bitrate / VIP tracks. |
+| `directStream` | Boolean | `true` | Attempts direct playback from JOOX CDN before falling back. |
+| `fallback.enabled` | Boolean | `true` | Enables automated audio fallback mirroring (LavaSrc model) when direct stream is unavailable. |
+| `fallback.providers` | List | `["ytmsearch:", "ytsearch:", "scsearch:"]` | Ordered list of search prefixes for resolving playable delegate tracks. |
 | `proxy.enabled` | Boolean | `false` | Enables intelligent proxy routing and automatic failover. |
 | `proxy.strategy` | String | `"roundRobin"` | Rotation strategy: `roundRobin`, `random`, or `failover`. |
 | `proxy.retryLimit` | Integer | `3` | Maximum retry attempts across available proxies before aborting request. |

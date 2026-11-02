@@ -52,13 +52,100 @@ class JooxProtocolParserTest {
                 "  ]\n" +
                 "}";
 
-        AudioPlaylist playlist = parser.parseSearch(json, info -> new DummyAudioTrack(info));
+        AudioPlaylist playlist = parser.parseSearch(json, DummyAudioTrack::new);
 
         assertNotNull(playlist);
         assertTrue(playlist.isSearchResult());
         assertEquals(2, playlist.getTracks().size());
         assertEquals("Song One", playlist.getTracks().get(0).getInfo().title);
         assertEquals("Song Two", playlist.getTracks().get(1).getInfo().title);
+    }
+
+    @Test
+    void testParseNextDataSearch() throws IOException {
+        String html = "<html><head><script id=\"__NEXT_DATA__\" type=\"application/json\">" +
+                "{\"props\":{\"pageProps\":{\"searchSections\":{\"songs\":{\"item_list\":[" +
+                "{\"type\":5,\"song\":[{\"song_info\":{\"id\":\"qrc123\",\"name\":\"ความรัก\",\"artist_list\":[{\"name\":\"Bodyslam\"}],\"play_duration\":291,\"images\":[{\"url\":\"https://img/cover.jpg\"}]}}]}," +
+                "{\"type\":5,\"song\":[{\"song_info\":{\"id\":\"qrc456\",\"name\":\"แสงสุดท้าย\",\"artist_list\":[{\"name\":\"Bodyslam\"}],\"play_duration\":275,\"images\":[{\"url\":\"https://img/cover2.jpg\"}]}}]}" +
+                "]}}}}}</script></head><body></body></html>";
+
+        AudioPlaylist playlist = parser.parseNextDataSearch(html, DummyAudioTrack::new);
+
+        assertNotNull(playlist);
+        assertTrue(playlist.isSearchResult());
+        assertEquals(2, playlist.getTracks().size());
+
+        AudioTrackInfo track1 = playlist.getTracks().get(0).getInfo();
+        assertEquals("qrc123", track1.identifier);
+        assertEquals("ความรัก", track1.title);
+        assertEquals("Bodyslam", track1.author);
+        assertEquals(291000L, track1.length);
+        assertEquals("https://img/cover.jpg", track1.artworkUrl);
+
+        AudioTrackInfo track2 = playlist.getTracks().get(1).getInfo();
+        assertEquals("qrc456", track2.identifier);
+        assertEquals("แสงสุดท้าย", track2.title);
+        assertEquals(275000L, track2.length);
+    }
+
+    @Test
+    void testParseNextDataTrack() throws IOException {
+        String html = "<html><head><script id=\"__NEXT_DATA__\" type=\"application/json\">" +
+                "{\"props\":{\"pageProps\":{" +
+                "\"singleInfo\":{\"id\":\"qrc123\",\"title\":\"ความรัก\",\"msinger\":\"Bodyslam\",\"imgSrc\":\"https://img/cover.jpg\"}," +
+                "\"passingArgumentsData\":{\"play_duration\":291}" +
+                "}}}</script></head><body></body></html>";
+
+        AudioTrackInfo track = parser.parseNextDataTrack(html, "fallback_id");
+
+        assertNotNull(track);
+        assertEquals("qrc123", track.identifier);
+        assertEquals("ความรัก", track.title);
+        assertEquals("Bodyslam", track.author);
+        assertEquals(291000L, track.length);
+        assertEquals("https://img/cover.jpg", track.artworkUrl);
+    }
+
+    @Test
+    void testParseNextDataAlbum() throws IOException {
+        String html = "<html><head><script id=\"__NEXT_DATA__\" type=\"application/json\">" +
+                "{\"props\":{\"pageProps\":{" +
+                "\"albumData\":{\"id\":\"alb999\",\"title\":\"คราม\",\"imgSrc\":\"https://img/album.jpg\"," +
+                "\"trackList\":{\"items\":[" +
+                "{\"id\":\"t1\",\"name\":\"คราม\",\"artist_list\":[{\"name\":\"Bodyslam\"}],\"play_duration\":250}," +
+                "{\"id\":\"t2\",\"name\":\"ความรัก\",\"artist_list\":[{\"name\":\"Bodyslam\"}],\"play_duration\":291}" +
+                "]}}}}}</script></head><body></body></html>";
+
+        AudioPlaylist album = parser.parseNextDataAlbum(html, "alb999", DummyAudioTrack::new);
+
+        assertNotNull(album);
+        assertFalse(album.isSearchResult());
+        assertEquals("คราม", album.getName());
+        assertEquals(2, album.getTracks().size());
+        assertEquals("t1", album.getTracks().get(0).getInfo().identifier);
+        assertEquals("คราม", album.getTracks().get(0).getInfo().title);
+        assertEquals("t2", album.getTracks().get(1).getInfo().identifier);
+        assertEquals("ความรัก", album.getTracks().get(1).getInfo().title);
+    }
+
+    @Test
+    void testParseNextDataPlaylist() throws IOException {
+        String html = "<html><head><script id=\"__NEXT_DATA__\" type=\"application/json\">" +
+                "{\"props\":{\"pageProps\":{" +
+                "\"playlistDetailList\":{\"id\":\"pl111\",\"title\":\"Best of Bodyslam\",\"imgSrc\":\"https://img/playlist.jpg\"," +
+                "\"trackList\":[" +
+                "{\"id\":\"p1\",\"name\":\"Track One\",\"artist_list\":[{\"name\":\"Bodyslam\"}],\"play_duration\":210}," +
+                "{\"id\":\"p2\",\"name\":\"Track Two\",\"artist_list\":[{\"name\":\"Bodyslam\"}],\"play_duration\":220}" +
+                "]}}}}</script></head><body></body></html>";
+
+        AudioPlaylist playlist = parser.parseNextDataPlaylist(html, "pl111", DummyAudioTrack::new);
+
+        assertNotNull(playlist);
+        assertFalse(playlist.isSearchResult());
+        assertEquals("Best of Bodyslam", playlist.getName());
+        assertEquals(2, playlist.getTracks().size());
+        assertEquals("p1", playlist.getTracks().get(0).getInfo().identifier);
+        assertEquals("p2", playlist.getTracks().get(1).getInfo().identifier);
     }
 
     @Test
@@ -94,13 +181,11 @@ class JooxProtocolParserTest {
 
     @Test
     void testParsePlaybackUrlFallbackWhenPreferredUnavailable() throws IOException {
-        // Only 96k AAC available
         String json = "{\n" +
                 "  \"code\": 0,\n" +
                 "  \"m4aUrl\": \"https://stream.joox.com/cdn/audio_96k.m4a\"\n" +
                 "}";
 
-        // Preferred is 320k, then 128k, then 96k
         String url = parser.parsePlaybackUrl(json, java.util.List.of(
                 com.github.petergamez.joox.config.JooxAudioQuality.MP3_320,
                 com.github.petergamez.joox.config.JooxAudioQuality.MP3_128,
@@ -129,4 +214,3 @@ class JooxProtocolParserTest {
         }
     }
 }
-

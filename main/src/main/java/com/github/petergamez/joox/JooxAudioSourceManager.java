@@ -27,7 +27,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Main AudioSourceManager for JOOX, resolving tracks, albums, playlists, and search queries.
+ * Main AudioSourceManager for JOOX, resolving tracks, albums, playlists, and search queries,
+ * with hybrid Next.js web scraping and fallback mirroring.
  */
 public class JooxAudioSourceManager implements AudioSourceManager, HttpConfigurable {
 
@@ -37,23 +38,24 @@ public class JooxAudioSourceManager implements AudioSourceManager, HttpConfigura
     private static final String SEARCH_PREFIX_SHORT = "jxsearch:";
 
     private static final Pattern TRACK_URL_PATTERN = Pattern.compile(
-            "^https?://(?:www\\.)?joox\\.com/(?:[a-zA-Z]{2}/)?(?:single|track)/([a-zA-Z0-9_-]+)"
+            "^https?://(?:www\\.)?joox\\.com/(?:[a-zA-Z]{2}/)?(?:single|track)/([a-zA-Z0-9_+=-]+)"
     );
     private static final Pattern ALBUM_URL_PATTERN = Pattern.compile(
-            "^https?://(?:www\\.)?joox\\.com/(?:[a-zA-Z]{2}/)?album/([a-zA-Z0-9_-]+)"
+            "^https?://(?:www\\.)?joox\\.com/(?:[a-zA-Z]{2}/)?album/([a-zA-Z0-9_+=-]+)"
     );
     private static final Pattern PLAYLIST_URL_PATTERN = Pattern.compile(
-            "^https?://(?:www\\.)?joox\\.com/(?:[a-zA-Z]{2}/)?playlist/([a-zA-Z0-9_-]+)"
+            "^https?://(?:www\\.)?joox\\.com/(?:[a-zA-Z]{2}/)?playlist/([a-zA-Z0-9_+=-]+)"
     );
 
-    private static final Pattern DIRECT_TRACK_PATTERN = Pattern.compile("^joox:track:([a-zA-Z0-9_-]+)$");
-    private static final Pattern DIRECT_ALBUM_PATTERN = Pattern.compile("^joox:album:([a-zA-Z0-9_-]+)$");
-    private static final Pattern DIRECT_PLAYLIST_PATTERN = Pattern.compile("^joox:playlist:([a-zA-Z0-9_-]+)$");
+    private static final Pattern DIRECT_TRACK_PATTERN = Pattern.compile("^joox:track:([a-zA-Z0-9_+=-]+)$");
+    private static final Pattern DIRECT_ALBUM_PATTERN = Pattern.compile("^joox:album:([a-zA-Z0-9_+=-]+)$");
+    private static final Pattern DIRECT_PLAYLIST_PATTERN = Pattern.compile("^joox:playlist:([a-zA-Z0-9_+=-]+)$");
 
     private final JooxConfig config;
     private final ProxyRotator proxyRotator;
     private final JooxApiClient apiClient;
     private final HttpInterfaceManager httpInterfaceManager;
+    private AudioPlayerManager audioPlayerManager;
 
     public JooxAudioSourceManager() {
         this(new JooxConfig());
@@ -75,6 +77,10 @@ public class JooxAudioSourceManager implements AudioSourceManager, HttpConfigura
     public AudioItem loadItem(AudioPlayerManager manager, AudioReference reference) {
         if (!config.isEnabled()) {
             return null;
+        }
+
+        if (this.audioPlayerManager == null && manager != null) {
+            this.audioPlayerManager = manager;
         }
 
         String identifier = reference.identifier;
@@ -159,6 +165,14 @@ public class JooxAudioSourceManager implements AudioSourceManager, HttpConfigura
         return proxyRotator;
     }
 
+    public AudioPlayerManager getAudioPlayerManager() {
+        return audioPlayerManager;
+    }
+
+    public void setAudioPlayerManager(AudioPlayerManager audioPlayerManager) {
+        this.audioPlayerManager = audioPlayerManager;
+    }
+
     @Override
     public boolean isTrackEncodable(AudioTrack track) {
         return true;
@@ -193,4 +207,3 @@ public class JooxAudioSourceManager implements AudioSourceManager, HttpConfigura
         }
     }
 }
-

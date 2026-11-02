@@ -22,6 +22,11 @@ class JooxConfigTest {
         assertEquals(JooxAudioQuality.MP3_320, config.getQualities().get(0));
         assertTrue(config.isAllowSearch());
         assertEquals(20, config.getSearchLimit());
+        assertTrue(config.isDirectStream());
+        assertNotNull(config.getFallback());
+        assertTrue(config.getFallback().isEnabled());
+        assertEquals(3, config.getFallback().getProviders().size());
+        assertEquals("ytmsearch:", config.getFallback().getProviders().get(0));
         assertNotNull(config.getProxy());
         assertFalse(config.getProxy().isEnabled());
     }
@@ -36,6 +41,9 @@ class JooxConfigTest {
         config.setSessionToken("test-session");
         config.setAllowSearch(false);
         config.setSearchLimit(50);
+        config.setDirectStream(false);
+        config.getFallback().setEnabled(true);
+        config.getFallback().setProviders(List.of("scsearch:", "ytsearch:"));
 
         assertFalse(config.isEnabled());
         assertEquals("ID", config.getCountryCode());
@@ -44,6 +52,10 @@ class JooxConfigTest {
         assertEquals("test-session", config.getSessionToken());
         assertFalse(config.isAllowSearch());
         assertEquals(50, config.getSearchLimit());
+        assertFalse(config.isDirectStream());
+        assertTrue(config.getFallback().isEnabled());
+        assertEquals(2, config.getFallback().getProviders().size());
+        assertEquals("scsearch:", config.getFallback().getProviders().get(0));
     }
 
     @Test
@@ -58,4 +70,3 @@ class JooxConfigTest {
         assertEquals(2, config.getProxy().getProxies().size());
     }
 }
-

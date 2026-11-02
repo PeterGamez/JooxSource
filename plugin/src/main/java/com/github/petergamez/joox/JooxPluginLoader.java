@@ -20,8 +20,9 @@ public class JooxPluginLoader implements AudioPlayerManagerConfiguration {
     public JooxPluginLoader(JooxPluginConfig config) {
         this.config = config;
         this.sourceManager = new JooxAudioSourceManager(config);
-        log.info("JooxSource Plugin for Lavalink v4 initialized (Enabled: {}, Country: {}, Qualities: {}, REST API: {})",
+        log.info("JooxSource Plugin for Lavalink v4 initialized (Enabled: {}, Country: {}, Qualities: {}, Fallback: {}, REST API: {})",
                 config.isEnabled(), config.getCountryCode(), config.getQualities(),
+                config.getFallback().isEnabled() ? config.getFallback().getProviders() : "DISABLED",
                 config.getRestApi().isEnabled() ? "ENABLED" : "DISABLED");
     }
 
@@ -29,6 +30,7 @@ public class JooxPluginLoader implements AudioPlayerManagerConfiguration {
     public AudioPlayerManager configure(AudioPlayerManager manager) {
         if (config.isEnabled()) {
             log.info("Registering JOOX AudioSourceManager to Lavalink AudioPlayerManager");
+            sourceManager.setAudioPlayerManager(manager);
             manager.registerSourceManager(sourceManager);
         } else {
             log.info("JOOX AudioSourceManager registration skipped (disabled in config)");
@@ -44,4 +46,3 @@ public class JooxPluginLoader implements AudioPlayerManagerConfiguration {
         return sourceManager;
     }
 }
-

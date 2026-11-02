@@ -1,6 +1,6 @@
 # 🎵 JooxSource - Lavalink v4 Plugin
 
-**JooxSource** is a high-performance **JOOX Audio Source Plugin** for **Lavalink v4** engineered with a decoupled multi-module architecture.
+**JooxSource** is a high-performance **JOOX Audio Source Plugin** for **Lavalink v4**.
 
 This plugin enables Discord bots and audio clients to search, resolve, and stream music directly from **JOOX** (Tencent Music Entertainment), featuring intelligent **proxy rotation**, **regional catalog selection** (TH, ID, MY, HK), **audio quality negotiation** (128k, 320k, Lossless FLAC), and format probing (MP3, AAC, FLAC).
 

@@ -161,7 +161,12 @@ plugins:
 
 ## 🛡️ Proxy Strategies & Regional Routing
 
-JOOX enforces regional availability restrictions for music playback. If your Lavalink node is hosted outside of Southeast Asia (e.g. US, Europe), configuring regional proxies ensures reliable playback using Lavalink-aligned routing strategies:
+JOOX enforces regional availability restrictions for direct music playback. If your Lavalink node is hosted outside of Southeast Asia (e.g. US, Europe), configuring regional proxies ensures reliable playback using Lavalink-aligned routing strategies:
+
+> [!TIP]
+> **Do You Really Need a Proxy?**
+> - **Metadata & Audio Mirroring (No Proxy Needed):** If you resolve JOOX track metadata and stream audio via Fallback Mirroring (`directStream: false` and `fallback.enabled: true` to YouTube / YouTube Music), **proxies are not required** (`proxy.enabled: false`). JOOX web metadata is globally accessible without regional IP blocks.
+> - **Direct CDN Streaming:** Regional proxies (TH, ID, MY, HK) are strictly required only when streaming direct CDN audio (`directStream: true`) from outside supported regions, or to mitigate heavy search rate limits.
 
 | Strategy | Recommended Pool Size | Working Mechanism | Best Used For |
 | :--- | :---: | :--- | :--- |

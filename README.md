@@ -13,6 +13,7 @@ Following the decoupled pattern established by TrackCache, the repository is spl
 ```mermaid
 flowchart TD
     Client(["🎧 Lavalink Client / Discord Bot"]) -->|"POST /v4/loadtracks"| Lavalink["🖥️ Lavalink v4 Server"]
+    Client <-->|"GET /v4/joox/*<br/>POST /v4/joox/proxies/reset"| RestApi
 
     subgraph PluginModule [":plugin (Lavalink Extension Module)"]
         PluginLoader["🔌 JooxPluginLoader<br/><i>(AudioPlayerManagerConfiguration SPI)</i>"]
@@ -31,7 +32,12 @@ flowchart TD
 
     Lavalink -->|"1. Initialize Plugin"| PluginLoader
     PluginLoader -->|"2. Read application.yml"| PluginConfig
+    PluginConfig -.->|"Inherits & Populates"| CoreConfig
     PluginLoader -->|"3. Register Source Manager"| SourceManager
+    SourceManager -.->|"Reads Settings"| CoreConfig
+
+    RestApi -->|"Query Status & Reset Proxies"| ProxyRotator
+    RestApi -.->|"Read Active Config"| PluginConfig
 
     Lavalink -->|"4. Dispatch Query"| SourceManager
     SourceManager -->|"5. Search / Fetch Metadata"| ApiClient

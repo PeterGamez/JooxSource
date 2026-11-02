@@ -1,6 +1,6 @@
 # 🎵 JooxSource - Lavalink v4 Plugin
 
-**JooxSource** is a high-performance **JOOX Audio Source Plugin** for **Lavalink v4** and **Lavaplayer**, engineered with a decoupled multi-module architecture.
+**JooxSource** is a high-performance **JOOX Audio Source Plugin** for **Lavalink v4** engineered with a decoupled multi-module architecture.
 
 This plugin enables Discord bots and audio clients to search, resolve, and stream music directly from **JOOX** (Tencent Music Entertainment), featuring intelligent **proxy rotation**, **regional catalog selection** (TH, ID, MY, HK), **audio quality negotiation** (128k, 320k, Lossless FLAC), and format probing (MP3, AAC, FLAC).
 
@@ -244,25 +244,3 @@ POST /v4/joox/proxies/reset
 ```
 
 ---
-
-## 🛠️ Building From Source
-
-### Prerequisites:
-- **JDK 17** or higher
-- Gradle wrapper (included)
-
-### Build Commands:
-```bash
-# Build both core library (:main) and plugin (:plugin)
-./gradlew build
-
-# Run unit tests across all modules
-./gradlew test
-
-# Install artifacts to local Maven repository (~/.m2)
-./gradlew publishToMavenLocal
-```
-
-Output JAR files are generated in `build/libs/`:
-- `build/libs/jooxsource-plugin-*.jar` (~36 KB - Lavalink v4 Plugin)
-- `build/libs/jooxsource-main-*.jar` (~29 KB - Standalone Core Library)

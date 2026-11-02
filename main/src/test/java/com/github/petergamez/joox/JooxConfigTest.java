@@ -22,7 +22,7 @@ class JooxConfigTest {
         assertEquals(JooxAudioQuality.MP3_320, config.getQualities().get(0));
         assertTrue(config.isAllowSearch());
         assertEquals(20, config.getSearchLimit());
-        assertTrue(config.isDirectStream());
+        assertFalse(config.isDirectStream());
         assertNotNull(config.getFallback());
         assertTrue(config.getFallback().isEnabled());
         assertEquals(3, config.getFallback().getProviders().size());

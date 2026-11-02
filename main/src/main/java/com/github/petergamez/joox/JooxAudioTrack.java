@@ -1,16 +1,9 @@
 package com.github.petergamez.joox;
 
-import com.sedmelluq.discord.lavaplayer.container.MediaContainerDetection;
-import com.sedmelluq.discord.lavaplayer.container.MediaContainerDetectionResult;
-import com.sedmelluq.discord.lavaplayer.container.MediaContainerHints;
-import com.sedmelluq.discord.lavaplayer.container.MediaContainerRegistry;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.source.AudioSourceManager;
-import com.sedmelluq.discord.lavaplayer.tools.io.HttpInterface;
-import com.sedmelluq.discord.lavaplayer.tools.io.PersistentHttpStream;
 import com.sedmelluq.discord.lavaplayer.track.AudioItem;
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
-import com.sedmelluq.discord.lavaplayer.track.AudioReference;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import com.sedmelluq.discord.lavaplayer.track.DelegatedAudioTrack;
@@ -20,12 +13,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.URI;
 import java.util.List;
 
 /**
  * Lavaplayer AudioTrack implementation for JOOX tracks,
- * featuring hybrid direct JOOX CDN streaming and automated Audio Fallback Mirroring (LavaSrc model).
+ * featuring automated Audio Fallback Mirroring (LavaSrc model).
  */
 public class JooxAudioTrack extends DelegatedAudioTrack {
 
@@ -42,41 +34,7 @@ public class JooxAudioTrack extends DelegatedAudioTrack {
     public void process(LocalAudioTrackExecutor executor) throws Exception {
         String songId = this.trackInfo.identifier;
 
-        // 1. Attempt Direct JOOX CDN Streaming (if enabled)
-        if (sourceManager.getConfig().isDirectStream()) {
-            try {
-                log.debug("Attempting direct JOOX CDN playback for song ID: {}", songId);
-                String playbackUrl = sourceManager.getApiClient().resolvePlaybackUrl(
-                        songId,
-                        sourceManager.getConfig().getQualities()
-                );
-
-                if (playbackUrl != null && !playbackUrl.isEmpty()) {
-                    try (HttpInterface httpInterface = sourceManager.getHttpInterface()) {
-                        try (PersistentHttpStream stream = new PersistentHttpStream(httpInterface, new URI(playbackUrl), null)) {
-                            MediaContainerDetection detection = new MediaContainerDetection(
-                                    MediaContainerRegistry.DEFAULT_REGISTRY,
-                                    new AudioReference(playbackUrl, trackInfo.title),
-                                    stream,
-                                    MediaContainerHints.from(null, null)
-                            );
-
-                            MediaContainerDetectionResult result = detection.detectContainer();
-                            if (result.isContainerDetected() && result.isSupportedFile()) {
-                                log.info("Streaming JOOX track '{}' directly from CDN ({})", trackInfo.title, result.getContainerDescriptor().probe.getName());
-                                InternalAudioTrack delegateTrack = (InternalAudioTrack) result.getContainerDescriptor().createTrack(trackInfo, stream);
-                                processDelegate(delegateTrack, executor);
-                                return;
-                            }
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                log.debug("Direct JOOX CDN stream failed for track '{}' ({}): {}", trackInfo.title, songId, e.getMessage());
-            }
-        }
-
-        // 2. Automated Audio Fallback Mirroring (LavaSrc model)
+        // Automated Audio Fallback Mirroring (LavaSrc model)
         if (sourceManager.getConfig().getFallback().isEnabled()) {
             AudioPlayerManager apm = sourceManager.getAudioPlayerManager();
             if (apm != null) {
@@ -148,7 +106,7 @@ public class JooxAudioTrack extends DelegatedAudioTrack {
             }
         }
 
-        throw new IOException("Failed to play JOOX track '" + trackInfo.title + "' (" + songId + "): Direct CDN stream unavailable and no fallback provider succeeded.");
+        throw new IOException("Failed to play JOOX track '" + trackInfo.title + "' (" + songId + "): No fallback audio provider succeeded.");
     }
 
     @Override

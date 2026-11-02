@@ -38,7 +38,6 @@ public class JooxApiClient {
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
     private static final String WEB_BASE_URL = "https://www.joox.com";
     private static final String BASE_API_URL = "https://api.joox.com/web-fcgi-bin";
-    private static final String OPENJOOX_API_URL = "https://api-jooxtt.sanook.com/openjoox/v1";
 
     private final JooxConfig config;
     private final ProxyRotator proxyRotator;
@@ -267,40 +266,6 @@ public class JooxApiClient {
             String json = executeGet(apiUri);
             return parser.parsePlaylist(json, "JOOX Playlist " + playlistId, trackFactory);
         }
-    }
-
-    /**
-     * Resolves playable CDN audio stream URL for a given track identifier based on ordered quality list.
-     */
-    public String resolvePlaybackUrl(String songId, List<JooxAudioQuality> qualities) throws IOException {
-        List<JooxAudioQuality> targetQualities = (qualities != null && !qualities.isEmpty())
-                ? qualities
-                : config.getQualities();
-
-        JooxAudioQuality topQuality = targetQualities.get(0);
-        Map<String, String> params = new LinkedHashMap<>();
-        params.put("quality", topQuality.getLabel());
-        params.put("country", config.getCountryCode().toLowerCase());
-
-        URI uri = buildUri(OPENJOOX_API_URL + "/song/" + songId + "/play", params);
-
-        try {
-            String json = executeGet(uri);
-            return parser.parsePlaybackUrl(json, targetQualities);
-        } catch (Exception e) {
-            log.debug("OpenJOOX playback resolution failed for {}, falling back to songinfo: {}", songId, e.getMessage());
-            Map<String, String> fallbackParams = new LinkedHashMap<>();
-            fallbackParams.put("songid", songId);
-            fallbackParams.put("country", config.getCountryCode().toLowerCase());
-
-            URI fallbackUri = buildUri(BASE_API_URL + "/web_get_songinfo", fallbackParams);
-            String fallbackJson = executeGet(fallbackUri);
-            return parser.parsePlaybackUrl(fallbackJson, targetQualities);
-        }
-    }
-
-    public String resolvePlaybackUrl(String songId, JooxAudioQuality quality) throws IOException {
-        return resolvePlaybackUrl(songId, quality != null ? List.of(quality) : config.getQualities());
     }
 
     public JooxConfig getConfig() {

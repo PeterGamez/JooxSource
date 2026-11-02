@@ -110,8 +110,8 @@ plugins:
     wmid: ""                    # Optional: Joox Web Master ID
     sessionToken: ""            # Optional: Joox VIP session token for premium/FLAC tracks
 
-    # Playback & Audio Mirroring (LavaSrc model)
-    directStream: true          # Try direct JOOX CDN stream first (if available/VIP)
+    # Playback & Audio Mirroring
+    directStream: false         # Audio mirroring
     fallback:
       enabled: true             # Enable automated audio fallback mirroring (default: true)
       providers:                # Priority order for audio resolution
@@ -147,7 +147,7 @@ plugins:
 | `searchLimit` | Integer | `20` | Maximum number of results returned for search queries. |
 | `wmid` | String | `""` | Optional JOOX user Web Master ID (wmid) for authenticated requests. |
 | `sessionToken` | String | `""` | Optional JOOX VIP session token for high-bitrate / VIP tracks. |
-| `directStream` | Boolean | `true` | Attempts direct playback from JOOX CDN before falling back. |
+| `directStream` | Boolean | `false` | When `false` seamlessly delegates audio playback to fallback mirroring (YouTube Music/YouTube/SoundCloud). |
 | `fallback.enabled` | Boolean | `true` | Enables automated audio fallback mirroring (LavaSrc model) when direct stream is unavailable. |
 | `fallback.providers` | List | `[ ytmsearch:%QUERY%, ytsearch:%QUERY%, scsearch:%QUERY% ]` | Ordered list of search providers for resolving playable delegate tracks (supports `%QUERY%` or plain prefixes). |
 | `proxy.enabled` | Boolean | `false` | Enables intelligent proxy routing and automatic failover. |

@@ -21,7 +21,7 @@ public class JooxConfig {
     private String sessionToken = "";
     private boolean allowSearch = true;
     private int searchLimit = 20;
-    private boolean directStream = true;
+    private boolean directStream = false;
     private FallbackConfig fallback = new FallbackConfig();
     private ProxyConfig proxy = new ProxyConfig();
 

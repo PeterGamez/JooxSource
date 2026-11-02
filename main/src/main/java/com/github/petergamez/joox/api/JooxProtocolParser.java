@@ -317,43 +317,4 @@ public class JooxProtocolParser {
 
         return new BasicAudioPlaylist(name, tracks, null, false);
     }
-
-    public String parsePlaybackUrl(String json, List<JooxAudioQuality> preferredQualities) throws IOException {
-        JsonNode root = mapper.readTree(json);
-        JsonNode data = root.path("data");
-
-        if (preferredQualities != null && !preferredQualities.isEmpty()) {
-            for (JooxAudioQuality quality : preferredQualities) {
-                for (String key : quality.getCdnKeys()) {
-                    if (root.hasNonNull(key) && !root.get(key).asText().isEmpty()) {
-                        return root.get(key).asText();
-                    }
-                    if (data.isObject() && data.hasNonNull(key) && !data.get(key).asText().isEmpty()) {
-                        return data.get(key).asText();
-                    }
-                }
-            }
-        }
-
-        String[] genericKeys = {"playUrl", "url", "streamUrl", "mp3Url", "r320Url"};
-        for (String key : genericKeys) {
-            if (root.hasNonNull(key) && !root.get(key).asText().isEmpty()) {
-                return root.get(key).asText();
-            }
-            if (data.isObject() && data.hasNonNull(key) && !data.get(key).asText().isEmpty()) {
-                return data.get(key).asText();
-            }
-        }
-
-        throw new IOException("No playable stream URL found in JOOX playback response");
-    }
-
-    public String parsePlaybackUrl(String json) throws IOException {
-        return parsePlaybackUrl(json, List.of(
-                JooxAudioQuality.MP3_320,
-                JooxAudioQuality.MP3_128,
-                JooxAudioQuality.M4A_96,
-                JooxAudioQuality.FLAC
-        ));
-    }
 }

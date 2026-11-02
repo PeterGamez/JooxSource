@@ -148,51 +148,7 @@ class JooxProtocolParserTest {
         assertEquals("p2", playlist.getTracks().get(1).getInfo().identifier);
     }
 
-    @Test
-    void testParsePlaybackUrlWithQualityPreference() throws IOException {
-        String json = "{\n" +
-                "  \"code\": 0,\n" +
-                "  \"r320Url\": \"https://stream.joox.com/cdn/audio_320k.mp3\",\n" +
-                "  \"flacUrl\": \"https://stream.joox.com/cdn/audio_lossless.flac\",\n" +
-                "  \"m4aUrl\": \"https://stream.joox.com/cdn/audio_96k.m4a\"\n" +
-                "}";
 
-        // When FLAC is preferred first
-        String flacUrl = parser.parsePlaybackUrl(json, java.util.List.of(
-                com.github.petergamez.joox.config.JooxAudioQuality.FLAC,
-                com.github.petergamez.joox.config.JooxAudioQuality.MP3_320
-        ));
-        assertEquals("https://stream.joox.com/cdn/audio_lossless.flac", flacUrl);
-
-        // When MP3_320 is preferred first
-        String mp3Url = parser.parsePlaybackUrl(json, java.util.List.of(
-                com.github.petergamez.joox.config.JooxAudioQuality.MP3_320,
-                com.github.petergamez.joox.config.JooxAudioQuality.FLAC
-        ));
-        assertEquals("https://stream.joox.com/cdn/audio_320k.mp3", mp3Url);
-
-        // When low bitrate M4A_96 is preferred
-        String m4aUrl = parser.parsePlaybackUrl(json, java.util.List.of(
-                com.github.petergamez.joox.config.JooxAudioQuality.M4A_96,
-                com.github.petergamez.joox.config.JooxAudioQuality.MP3_320
-        ));
-        assertEquals("https://stream.joox.com/cdn/audio_96k.m4a", m4aUrl);
-    }
-
-    @Test
-    void testParsePlaybackUrlFallbackWhenPreferredUnavailable() throws IOException {
-        String json = "{\n" +
-                "  \"code\": 0,\n" +
-                "  \"m4aUrl\": \"https://stream.joox.com/cdn/audio_96k.m4a\"\n" +
-                "}";
-
-        String url = parser.parsePlaybackUrl(json, java.util.List.of(
-                com.github.petergamez.joox.config.JooxAudioQuality.MP3_320,
-                com.github.petergamez.joox.config.JooxAudioQuality.MP3_128,
-                com.github.petergamez.joox.config.JooxAudioQuality.M4A_96
-        ));
-        assertEquals("https://stream.joox.com/cdn/audio_96k.m4a", url);
-    }
 
     private static class DummyAudioTrack extends com.sedmelluq.discord.lavaplayer.track.DelegatedAudioTrack {
         public DummyAudioTrack(AudioTrackInfo trackInfo) {

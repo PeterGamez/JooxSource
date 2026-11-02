@@ -22,7 +22,7 @@ class JooxRestHandlerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(true, response.getBody().get("enabled"));
-        assertEquals(true, response.getBody().get("directStream"));
+        assertEquals(false, response.getBody().get("directStream"));
         assertEquals(true, response.getBody().get("fallbackEnabled"));
         assertNotNull(response.getBody().get("fallbackProviders"));
     }

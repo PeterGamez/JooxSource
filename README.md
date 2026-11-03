@@ -92,8 +92,8 @@ Add the following block to your Lavalink `application.yml`:
 ```yaml
 lavalink:
   plugins:
-    - dependency: com.github.petergamez.jooxsource:jooxsource-plugin:x.y.z
-      repository: https://jitpack.io # Or place the .jar file directly into the plugins/ directory
+    - dependency: "com.github.petergamez.jooxsource:jooxsource-plugin:0.0.1"
+      repository: "https://jitpack.io" # Or place the .jar file directly into the plugins/ directory
 
 plugins:
   joox:
